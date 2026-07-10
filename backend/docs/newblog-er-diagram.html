@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NewBlog 数据库 ER 图</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #202733;
+      --muted: #657282;
+      --line: #d9e0e8;
+      --blog: #2f80ed;
+      --site: #16a085;
+      --content: #b05c00;
+      --system: #6f42c1;
+      --soft-blog: #eaf3ff;
+      --soft-site: #e8f7f3;
+      --soft-content: #fff2e3;
+      --soft-system: #f2ecff;
+      --shadow: 0 10px 30px rgba(31, 42, 55, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    header {
+      padding: 28px 36px 18px;
+      background: #101923;
+      color: #fff;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    header p {
+      margin: 0;
+      color: #c9d3df;
+      max-width: 1060px;
+    }
+
+    main {
+      padding: 24px 36px 48px;
+      max-width: 1640px;
+      margin: 0 auto;
+    }
+
+    .notice {
+      background: #fff8e6;
+      border: 1px solid #f1d48b;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+      color: #604708;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 24px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    section {
+      margin-bottom: 28px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+
+    .diagram-wrap {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: auto;
+      padding: 20px;
+    }
+
+    svg {
+      min-width: 1420px;
+      height: 980px;
+      display: block;
+    }
+
+    .entity rect {
+      rx: 8;
+      ry: 8;
+      stroke-width: 1.5;
+      filter: drop-shadow(0 3px 5px rgba(22, 33, 44, 0.08));
+    }
+
+    .entity .title {
+      font-size: 15px;
+      font-weight: 700;
+      fill: var(--ink);
+    }
+
+    .entity .desc {
+      font-size: 12px;
+      fill: var(--muted);
+    }
+
+    .entity .field {
+      font-size: 11px;
+      fill: #394655;
+    }
+
+    .entity .pk {
+      font-weight: 700;
+    }
+
+    .group-label {
+      font-size: 18px;
+      font-weight: 700;
+      fill: #243142;
+    }
+
+    .relation {
+      fill: none;
+      stroke: #405467;
+      stroke-width: 2;
+    }
+
+    .relation.logical {
+      stroke-dasharray: 6 5;
+      stroke: #7b8794;
+    }
+
+    .relation-label {
+      font-size: 12px;
+      fill: #4a5664;
+      paint-order: stroke;
+      stroke: #fff;
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 18px rgba(31, 42, 55, 0.05);
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tag {
+      font-size: 12px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .tag.blog { background: var(--blog); }
+    .tag.site { background: var(--site); }
+    .tag.content { background: var(--content); }
+    .tag.system { background: var(--system); }
+
+    .fields {
+      margin: 0;
+      padding-left: 18px;
+      color: #3c4856;
+      font-size: 13px;
+    }
+
+    .fields li {
+      margin: 3px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    th {
+      background: #eef2f6;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code {
+      font-family: Consolas, "JetBrains Mono", monospace;
+      background: #eef2f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NewBlog 数据库 ER 图</h1>
+    <p>基于当前 Flyway 迁移脚本生成。当前数据库共有 17 张表：16 张业务表，另有 1 张 Flyway 自动维护的迁移历史表。</p>
+  </header>
+
+  <main>
+    <div class="notice">
+      实线表示数据库真实外键；虚线表示业务逻辑关联，目前没有外键约束。当前唯一真实外键是 <code>blog_images.blog_id → blog_posts.id</code>。
+    </div>
+
+    <div class="legend">
+      <span><i class="dot" style="background: var(--blog)"></i>博客核心</span>
+      <span><i class="dot" style="background: var(--site)"></i>站点配置/首页</span>
+      <span><i class="dot" style="background: var(--content)"></i>内容模块</span>
+      <span><i class="dot" style="background: var(--system)"></i>系统/运维</span>
+      <span>实线：真实外键</span>
+      <span>虚线：业务关联</span>
+    </div>
+
+    <section>
+      <h2>ER 图</h2>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1420 980" role="img" aria-label="NewBlog ER Diagram">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#405467"></path>
+            </marker>
+            <marker id="arrow-soft" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#7b8794"></path>
+            </marker>
+          </defs>
+
+          <text x="40" y="34" class="group-label">博客核心</text>
+          <text x="520" y="34" class="group-label">站点配置 / 首页</text>
+          <text x="980" y="34" class="group-label">内容模块</text>
+          <text x="40" y="790" class="group-label">系统 / 运维</text>
+
+          <g class="entity" transform="translate(40 60)">
+            <rect width="290" height="172" fill="var(--soft-blog)" stroke="var(--blog)"></rect>
+            <text x="16" y="28" class="title">blog_posts</text>
+            <text x="16" y="49" class="desc">博客文章主表</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">slug, title, markdown</text>
+            <text x="16" y="120" class="field">summary, tags(JSON), category</text>
+            <text x="16" y="141" class="field">cover_url, hidden, view_count</text>
+            <text x="16" y="162" class="field">published_at, created_at, updated_at</text>
+          </g>
+
+          <g class="entity" transform="translate(40 292)">
+            <rect width="290" height="154" fill="var(--soft-blog)" stroke="var(--blog)"></rect>
+            <text x="16" y="28" class="title">blog_images</text>
+            <text x="16" y="49" class="desc">博客正文/封面相关图片</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">FK blog_id → blog_posts.id</text>
+            <text x="16" y="120" class="field">url, storage_path, sha256</text>
+            <text x="16" y="141" class="field">file_size, width, height, sort_order</text>
+          </g>
+
+          <g class="entity" transform="translate(40 506)">
+            <rect width="290" height="128" fill="var(--soft-blog)" stroke="var(--blog)"></rect>
+            <text x="16" y="28" class="title">categories</text>
+            <text x="16" y="49" class="desc">分类字典和排序</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">UNIQUE name</text>
+            <text x="16" y="120" class="field">sort_order, created_at, updated_at</text>
+          </g>
+
+          <g class="entity" transform="translate(390 506)">
+            <rect width="290" height="128" fill="var(--soft-blog)" stroke="var(--blog)"></rect>
+            <text x="16" y="28" class="title">likes</text>
+            <text x="16" y="49" class="desc">点赞记录 / IP 防刷依据</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">blog_slug, ip_address</text>
+            <text x="16" y="120" class="field">user_agent, created_at</text>
+          </g>
+
+          <g class="entity" transform="translate(520 60)">
+            <rect width="300" height="172" fill="var(--soft-site)" stroke="var(--site)"></rect>
+            <text x="16" y="28" class="title">site_config</text>
+            <text x="16" y="49" class="desc">全站单例配置</text>
+            <text x="16" y="78" class="field pk">PK id = 1</text>
+            <text x="16" y="99" class="field">meta_title, meta_description</text>
+            <text x="16" y="120" class="field">favicon_url, avatar_url, beian</text>
+            <text x="16" y="141" class="field">hat_content, theme(JSON)</text>
+            <text x="16" y="162" class="field">hide_edit_button, is_cache_pem</text>
+          </g>
+
+          <g class="entity" transform="translate(520 292)">
+            <rect width="300" height="154" fill="var(--soft-site)" stroke="var(--site)"></rect>
+            <text x="16" y="28" class="title">card_styles</text>
+            <text x="16" y="49" class="desc">首页卡片布局配置</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">UNIQUE card_key</text>
+            <text x="16" y="120" class="field">width, height, offset_x, offset_y</text>
+            <text x="16" y="141" class="field">sort_order, enabled, updated_at</text>
+          </g>
+
+          <g class="entity" transform="translate(520 506)">
+            <rect width="300" height="128" fill="var(--soft-site)" stroke="var(--site)"></rect>
+            <text x="16" y="28" class="title">art_images</text>
+            <text x="16" y="49" class="desc">首页装饰图 / ArtCard</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">url, description</text>
+            <text x="16" y="120" class="field">sort_order, created_at</text>
+          </g>
+
+          <g class="entity" transform="translate(520 674)">
+            <rect width="300" height="128" fill="var(--soft-site)" stroke="var(--site)"></rect>
+            <text x="16" y="28" class="title">background_images</text>
+            <text x="16" y="49" class="desc">首页背景图</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">url</text>
+            <text x="16" y="120" class="field">sort_order, created_at</text>
+          </g>
+
+          <g class="entity" transform="translate(860 292)">
+            <rect width="300" height="128" fill="var(--soft-site)" stroke="var(--site)"></rect>
+            <text x="16" y="28" class="title">social_buttons</text>
+            <text x="16" y="49" class="desc">社交按钮配置</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">type, value, label</text>
+            <text x="16" y="120" class="field">sort_order, created_at, updated_at</text>
+          </g>
+
+          <g class="entity" transform="translate(980 60)">
+            <rect width="300" height="128" fill="var(--soft-content)" stroke="var(--content)"></rect>
+            <text x="16" y="28" class="title">bloggers</text>
+            <text x="16" y="49" class="desc">博主收藏</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">name, avatar_url, url</text>
+            <text x="16" y="120" class="field">description, stars, sort_order</text>
+          </g>
+
+          <g class="entity" transform="translate(980 232)">
+            <rect width="300" height="128" fill="var(--soft-content)" stroke="var(--content)"></rect>
+            <text x="16" y="28" class="title">projects</text>
+            <text x="16" y="49" class="desc">项目展示</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">name, description, url</text>
+            <text x="16" y="120" class="field">image_url, sort_order</text>
+          </g>
+
+          <g class="entity" transform="translate(980 404)">
+            <rect width="300" height="128" fill="var(--soft-content)" stroke="var(--content)"></rect>
+            <text x="16" y="28" class="title">shares</text>
+            <text x="16" y="49" class="desc">分享链接 / 友情链接</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">name, url, logo_url</text>
+            <text x="16" y="120" class="field">description, sort_order</text>
+          </g>
+
+          <g class="entity" transform="translate(980 576)">
+            <rect width="300" height="128" fill="var(--soft-content)" stroke="var(--content)"></rect>
+            <text x="16" y="28" class="title">pictures</text>
+            <text x="16" y="49" class="desc">图片画廊</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">images(JSON)</text>
+            <text x="16" y="120" class="field">description, sort_order</text>
+          </g>
+
+          <g class="entity" transform="translate(980 748)">
+            <rect width="300" height="128" fill="var(--soft-content)" stroke="var(--content)"></rect>
+            <text x="16" y="28" class="title">snippets</text>
+            <text x="16" y="49" class="desc">一言 / 代码片段 / 摘录</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">content</text>
+            <text x="16" y="120" class="field">sort_order, created_at, updated_at</text>
+          </g>
+
+          <g class="entity" transform="translate(640 840)">
+            <rect width="300" height="110" fill="var(--soft-content)" stroke="var(--content)"></rect>
+            <text x="16" y="28" class="title">about</text>
+            <text x="16" y="49" class="desc">关于页面，单例内容</text>
+            <text x="16" y="78" class="field pk">PK id = 1</text>
+            <text x="16" y="99" class="field">title, description, content</text>
+          </g>
+
+          <g class="entity" transform="translate(40 824)">
+            <rect width="290" height="128" fill="var(--soft-system)" stroke="var(--system)"></rect>
+            <text x="16" y="28" class="title">users</text>
+            <text x="16" y="49" class="desc">管理员账户</text>
+            <text x="16" y="78" class="field pk">PK id</text>
+            <text x="16" y="99" class="field">username, password_hash</text>
+            <text x="16" y="120" class="field">role, enabled, created_at, updated_at</text>
+          </g>
+
+          <g class="entity" transform="translate(360 824)">
+            <rect width="240" height="128" fill="var(--soft-system)" stroke="var(--system)"></rect>
+            <text x="16" y="28" class="title">flyway_schema_history</text>
+            <text x="16" y="49" class="desc">Flyway 自动迁移历史</text>
+            <text x="16" y="78" class="field">installed_rank, version</text>
+            <text x="16" y="99" class="field">description, script</text>
+            <text x="16" y="120" class="field">checksum, success</text>
+          </g>
+
+          <path class="relation" marker-end="url(#arrow)" d="M185 292 L185 232"></path>
+          <text x="202" y="266" class="relation-label">N:1 / 删除文章级联删除图片</text>
+
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M330 570 C390 570, 390 170, 40 170"></path>
+          <text x="248" y="484" class="relation-label">category name 逻辑匹配</text>
+
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M390 570 C350 470, 350 260, 330 170"></path>
+          <text x="350" y="390" class="relation-label">likes.blog_slug → blog_posts.slug</text>
+
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M820 146 C900 146, 900 146, 980 124"></path>
+          <text x="842" y="134" class="relation-label">首页/导航读取</text>
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M820 146 C900 190, 920 260, 980 296"></path>
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M820 146 C900 270, 920 410, 980 468"></path>
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M820 146 C900 360, 920 580, 980 640"></path>
+          <path class="relation logical" marker-end="url(#arrow-soft)" d="M820 146 C860 590, 820 760, 790 840"></path>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <h2>表用途速览</h2>
+      <div class="cards">
+        <article class="card"><h3><span class="tag blog">博客</span> blog_posts</h3><p>文章主表，保存 slug、标题、Markdown 正文、摘要、标签、分类、封面、隐藏状态和浏览数。</p><ul class="fields"><li>唯一入口：<code>slug</code></li><li>正文：<code>markdown</code></li><li>标签：<code>tags JSON</code></li></ul></article>
+        <article class="card"><h3><span class="tag blog">博客</span> blog_images</h3><p>文章图片表，一篇文章可以有多张图片。当前唯一真实外键指向 <code>blog_posts.id</code>。</p><ul class="fields"><li><code>blog_id</code> 外键</li><li><code>sha256</code> 用于去重</li><li><code>storage_path</code> 记录本地存储路径</li></ul></article>
+        <article class="card"><h3><span class="tag blog">博客</span> categories</h3><p>分类字典表，保存分类名称和排序。当前与文章通过分类名称做逻辑关联。</p><ul class="fields"><li><code>name</code> 唯一</li><li><code>sort_order</code> 控制展示顺序</li></ul></article>
+        <article class="card"><h3><span class="tag blog">博客</span> likes</h3><p>点赞流水表，记录文章 slug、IP、User-Agent 和时间，用来统计点赞和做 1 小时防刷。</p><ul class="fields"><li>逻辑关联：<code>blog_slug → blog_posts.slug</code></li><li>索引支持 IP 时间窗口查询</li></ul></article>
+        <article class="card"><h3><span class="tag site">站点</span> site_config</h3><p>站点单例配置表，保存网站标题、描述、头像、favicon、备案号、帽子文案和主题色。</p><ul class="fields"><li><code>id = 1</code> 单例</li><li><code>theme JSON</code> 保存颜色变量</li></ul></article>
+        <article class="card"><h3><span class="tag site">站点</span> card_styles</h3><p>首页卡片布局表，保存各卡片宽高、偏移、排序和是否启用。</p><ul class="fields"><li><code>card_key</code> 唯一</li><li>对应前端首页拖拽布局</li></ul></article>
+        <article class="card"><h3><span class="tag site">站点</span> art_images</h3><p>首页装饰图，用于 ArtCard 或首页视觉内容。</p><ul class="fields"><li><code>url</code> 图片地址</li><li><code>sort_order</code> 控制顺序</li></ul></article>
+        <article class="card"><h3><span class="tag site">站点</span> background_images</h3><p>首页背景图资源表。</p><ul class="fields"><li><code>id</code> 字符串主键</li><li><code>url</code> 图片地址</li></ul></article>
+        <article class="card"><h3><span class="tag site">站点</span> social_buttons</h3><p>首页社交按钮配置，支持 GitHub、邮箱、B 站、知乎等不同类型。</p><ul class="fields"><li><code>type</code> 平台类型</li><li><code>value</code> 链接或值</li><li><code>label</code> 展示名</li></ul></article>
+        <article class="card"><h3><span class="tag content">内容</span> bloggers</h3><p>博主收藏列表。</p><ul class="fields"><li>头像：<code>avatar_url</code></li><li>评分：<code>stars</code></li></ul></article>
+        <article class="card"><h3><span class="tag content">内容</span> projects</h3><p>项目展示列表。</p><ul class="fields"><li>截图：<code>image_url</code></li><li>链接：<code>url</code></li></ul></article>
+        <article class="card"><h3><span class="tag content">内容</span> shares</h3><p>分享链接或友情链接列表。</p><ul class="fields"><li>Logo：<code>logo_url</code></li><li>链接：<code>url</code></li></ul></article>
+        <article class="card"><h3><span class="tag content">内容</span> pictures</h3><p>图片画廊，单条记录可以保存一组图片。</p><ul class="fields"><li><code>images JSON</code> 保存多图 URL</li><li><code>description</code> 描述</li></ul></article>
+        <article class="card"><h3><span class="tag content">内容</span> snippets</h3><p>一言、摘录或代码片段内容。</p><ul class="fields"><li><code>content</code> 正文</li><li><code>sort_order</code> 排序</li></ul></article>
+        <article class="card"><h3><span class="tag content">内容</span> about</h3><p>关于页面单例内容。</p><ul class="fields"><li><code>id = 1</code> 单例</li><li><code>content</code> 可存 Markdown</li></ul></article>
+        <article class="card"><h3><span class="tag system">系统</span> users</h3><p>管理员账户表，后续登录/JWT 会用它。</p><ul class="fields"><li><code>password_hash</code> 存 BCrypt 哈希</li><li><code>role</code> 目前默认 ADMIN</li></ul></article>
+        <article class="card"><h3><span class="tag system">运维</span> flyway_schema_history</h3><p>Flyway 自动创建和维护，记录哪些数据库迁移脚本已经执行。</p><ul class="fields"><li>不要手动改这张表</li><li>当前记录 V1、V2 已执行</li></ul></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>关系说明</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>关系</th>
+            <th>类型</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>blog_images.blog_id → blog_posts.id</code></td>
+            <td>真实外键</td>
+            <td>一篇文章可以有多张图片；删除文章时，图片记录会级联删除。</td>
+          </tr>
+          <tr>
+            <td><code>blog_posts.category ↔ categories.name</code></td>
+            <td>业务逻辑关联</td>
+            <td>文章分类当前存名称，不存 <code>category_id</code>。这样兼容前端现有 JSON 数据，但重命名分类时需要同步更新文章。</td>
+          </tr>
+          <tr>
+            <td><code>likes.blog_slug ↔ blog_posts.slug</code></td>
+            <td>业务逻辑关联</td>
+            <td>点赞按文章 slug 记录，不直接外键到文章 id。好处是迁移旧数据方便；坏处是改 slug 时需要同步点赞数据。</td>
+          </tr>
+          <tr>
+            <td><code>site_config</code> 与首页相关表</td>
+            <td>业务聚合</td>
+            <td>站点配置接口通常会聚合 <code>card_styles</code>、<code>art_images</code>、<code>background_images</code>、<code>social_buttons</code> 返回给前端。</td>
+          </tr>
+          <tr>
+            <td><code>flyway_schema_history</code></td>
+            <td>运维表</td>
+            <td>Flyway 维护迁移版本，与业务表无业务关系。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

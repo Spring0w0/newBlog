@@ -1,19 +1,64 @@
+# Workspace copies
+/2025-blog-public/
+
 # Dependencies
 node_modules/
+.pnp
+.pnp.*
+.pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Next.js build output
+# Next.js and frontend build output
 .next/
+.open-next/
 out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
 
-# Java
+# Java and Spring Boot build output
 *.class
 *.jar
 *.war
 target/
+.gradle/
 *.iml
+
+# Local runtime files
+uploads/
+backend/uploads/
+logs/
+backend/logs/
+*.log
+*.pid
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+!example.pem
+backend/src/main/resources/application-local.yaml
+backend/src/main/resources/application-*.local.yaml
+backend/src/main/resources/application-secret*.yaml
+
+# Database backups and dumps
+*.dump
+*.bak
+*.backup
+*.sql.gz
 
 # IDE
 .idea/
+.vscode/
+*.iws
+*.ipr
 *.swp
 *.swo
 *~
@@ -22,21 +67,15 @@ target/
 .DS_Store
 Thumbs.db
 
-# Env
-.env
-.env.local
-.env*.local
-
 # Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
-# Misc
-*.pem
-!example.pem
-
-# Cloudflare
+# Deploy and platform caches
+.vercel/
+.output/
 .cloudflare/
 .wrangler/
 

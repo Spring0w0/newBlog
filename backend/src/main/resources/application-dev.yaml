@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/newblog?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 1234
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  cache:
+    type: caffeine
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 30MB
+
+logging:
+  level:
+    com.spring0w0.backend: debug
+    org.springframework.security: info
+
+app:
+  upload:
+    root-dir: D:/develop/newBlog/uploads/blog-images
+    public-path: /images
