@@ -9,6 +9,7 @@ import { useSize, useSizeInit } from '@/hooks/use-size'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import { ScrollTopButton } from '@/components/scroll-top-button'
 import MusicCard from '@/components/music-card'
+import { AuthLoginDialog } from '@/components/auth-login-dialog'
 
 export default function Layout({ children }: PropsWithChildren) {
 	useCenterInit()
@@ -39,6 +40,7 @@ export default function Layout({ children }: PropsWithChildren) {
 					} as React.CSSProperties
 				}
 			/>
+			<AuthLoginDialog />
 			{currentBackgroundImage && (
 				<div
 					className='fixed inset-0 z-0 overflow-hidden'

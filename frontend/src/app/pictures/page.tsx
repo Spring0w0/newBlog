@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import initialList from './list.json'
@@ -27,10 +27,9 @@ export default function Page() {
 	const [isSaving, setIsSaving] = useState(false)
 	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
 	const [imageItems, setImageItems] = useState<Map<string, ImageItem>>(new Map())
-	const keyInputRef = useRef<HTMLInputElement>(null)
 	const router = useRouter()
 
-	const { isAuth, setPrivateKey } = useAuthStore()
+	const { isAuth, openLoginDialog } = useAuthStore()
 	const { siteContent } = useConfigStore()
 	const hideEditButton = siteContent.hideEditButton ?? false
 
@@ -109,7 +108,7 @@ export default function Page() {
 			} else {
 				// 删除特定索引的文件项
 				next.delete(`${pictureId}::${imageIndex}`)
-				
+
 				// 重新索引：删除索引 imageIndex 后，后面的索引需要前移
 				// 例如：删除索引 1，原来的索引 2 变成 1，索引 3 变成 2
 				const keysToUpdate: Array<{ oldKey: string; newKey: string }> = []
@@ -126,7 +125,7 @@ export default function Page() {
 						}
 					}
 				}
-				
+
 				// 执行重新索引
 				for (const { oldKey, newKey } of keysToUpdate) {
 					const value = next.get(oldKey)
@@ -155,20 +154,9 @@ export default function Page() {
 		})
 	}
 
-	const handleChoosePrivateKey = async (file: File) => {
-		try {
-			const text = await file.text()
-			setPrivateKey(text)
-			await handleSave()
-		} catch (error) {
-			console.error('Failed to read private key:', error)
-			toast.error('读取密钥文件失败')
-		}
-	}
-
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			keyInputRef.current?.click()
+			openLoginDialog(handleSave)
 		} else {
 			handleSave()
 		}
@@ -201,7 +189,7 @@ export default function Page() {
 		setIsEditMode(false)
 	}
 
-	const buttonText = isAuth ? '保存' : '导入密钥'
+	const buttonText = isAuth ? '保存' : '登录'
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -219,18 +207,6 @@ export default function Page() {
 
 	return (
 		<>
-			<input
-				ref={keyInputRef}
-				type='file'
-				accept='.pem'
-				className='hidden'
-				onChange={async e => {
-					const f = e.target.files?.[0]
-					if (f) await handleChoosePrivateKey(f)
-					if (e.currentTarget) e.currentTarget.value = ''
-				}}
-			/>
-
 			<RandomLayout pictures={pictures} isEditMode={isEditMode} onDeleteSingle={handleDeleteSingleImage} onDeleteGroup={handleDeleteGroup} />
 
 			{pictures.length === 0 && (

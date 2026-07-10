@@ -1,109 +1,115 @@
-import { createInstallationToken, getInstallationId, signAppJwt } from './github-client'
-import { GITHUB_CONFIG } from '@/consts'
-import { useAuthStore } from '@/hooks/use-auth'
-import { toast } from 'sonner'
-import { decrypt,encrypt } from './aes256-util'
+import { request, ApiError } from './api-client'
+import { clearAuthTokens, getAccessToken, hasAccessToken, saveAuthTokens } from './auth-token'
 
-const GITHUB_TOKEN_CACHE_KEY = 'github_token'
-const GITHUB_PEM_CACHE_KEY = 'p_info'
-
-function getTokenFromCache(): string | null {
-	if (typeof sessionStorage === 'undefined') return null
-	try {
-		return sessionStorage.getItem(GITHUB_TOKEN_CACHE_KEY)
-	} catch {
-		return null
-	}
+export interface LoginCredentials {
+	username: string
+	password: string
+	remember?: boolean
 }
 
-function saveTokenToCache(token: string): void {
-	if (typeof sessionStorage === 'undefined') return
-	try {
-		sessionStorage.setItem(GITHUB_TOKEN_CACHE_KEY, token)
-	} catch (error) {
-		console.error('Failed to save token to cache:', error)
-	}
+export interface AuthUser {
+	id?: string | number
+	username?: string
+	nickname?: string
+	roles?: string[]
+	[key: string]: unknown
 }
 
-function clearTokenCache(): void {
-	if (typeof sessionStorage === 'undefined') return
-	try {
-		sessionStorage.removeItem(GITHUB_TOKEN_CACHE_KEY)
-	} catch (error) {
-		console.error('Failed to clear token cache:', error)
-	}
+export interface LoginResult {
+	accessToken: string
+	refreshToken?: string
+	user?: AuthUser
 }
 
-export async function getPemFromCache(): Promise<string | null> {
-	if (typeof sessionStorage === 'undefined') return null
-	try {
-		// 解密缓存中的 pem
-		const encryptedPem = sessionStorage.getItem(GITHUB_PEM_CACHE_KEY)
-		if (!encryptedPem) return null
-		return await decrypt(encryptedPem, GITHUB_CONFIG.ENCRYPT_KEY)
-	} catch {
-		return null
-	}
-}
+type RawLoginResponse =
+	| string
+	| {
+			accessToken?: string
+			access_token?: string
+			token?: string
+			jwt?: string
+			refreshToken?: string
+			refresh_token?: string
+			user?: AuthUser
+			account?: AuthUser
+			admin?: AuthUser
+			[key: string]: unknown
+	  }
 
-export async function savePemToCache(pem: string): Promise<void> {
-	if (typeof sessionStorage === 'undefined') return
-	try {
-		// 加密 pem 后存储
-		const encryptedPem = await encrypt(pem, GITHUB_CONFIG.ENCRYPT_KEY)
-		sessionStorage.setItem(GITHUB_PEM_CACHE_KEY, encryptedPem)
-	} catch (error) {
-		console.error('Failed to save pem to cache:', error)
-	}
-}
+const LEGACY_AUTH_KEYS = ['github_token', 'p_info']
 
-function clearPemCache(): void {
-	if (typeof sessionStorage === 'undefined') return
-	try {
-		sessionStorage.removeItem(GITHUB_PEM_CACHE_KEY)
-	} catch (error) {
-		console.error('Failed to clear pem cache:', error)
-	}
+export async function login(credentials: LoginCredentials): Promise<LoginResult> {
+	const response = await request<RawLoginResponse>('/api/auth/login', {
+		method: 'POST',
+		body: {
+			username: credentials.username,
+			password: credentials.password
+		},
+		auth: false,
+		toastOnError: false
+	})
+	const result = normalizeLoginResponse(response)
+
+	saveAuthTokens(
+		{
+			accessToken: result.accessToken,
+			refreshToken: result.refreshToken
+		},
+		{ remember: credentials.remember }
+	)
+
+	clearLegacyAuthCache()
+
+	return result
 }
 
 export function clearAllAuthCache(): void {
-	clearTokenCache()
-	clearPemCache()
+	clearAuthTokens()
+	clearLegacyAuthCache()
 }
 
 export async function hasAuth(): Promise<boolean> {
-	return !!getTokenFromCache() || !!(await getPemFromCache())
+	return hasAccessToken()
 }
 
-/**
- * 统一的认证 Token 获取
- * 自动处理缓存、签发等逻辑
- * @returns GitHub Installation Token
- */
 export async function getAuthToken(): Promise<string> {
-	// 1. 先尝试从缓存获取 token
-	const cachedToken = getTokenFromCache()
-	if (cachedToken) {
-		toast.info('使用缓存的令牌...')
-		return cachedToken
+	const token = getAccessToken()
+	if (!token) {
+		throw new ApiError('Please login first', { status: 401, code: 401 })
 	}
-
-	// 2. 获取私钥（从缓存）
-	const privateKey = useAuthStore.getState().privateKey
-	if (!privateKey) {
-		throw new Error('需要先设置私钥。请使用 useAuth().setPrivateKey()')
-	}
-
-	toast.info('正在签发 JWT...')
-	const jwt = signAppJwt(GITHUB_CONFIG.APP_ID, privateKey)
-
-	toast.info('正在获取安装信息...')
-	const installationId = await getInstallationId(jwt, GITHUB_CONFIG.OWNER, GITHUB_CONFIG.REPO)
-
-	toast.info('正在创建安装令牌...')
-	const token = await createInstallationToken(jwt, installationId)
-
-	saveTokenToCache(token)
-
 	return token
+}
+
+function normalizeLoginResponse(response: RawLoginResponse): LoginResult {
+	if (typeof response === 'string') {
+		const accessToken = response.trim()
+		if (!accessToken) throw new ApiError('Login response is missing access token')
+		return { accessToken }
+	}
+
+	const accessToken = response.accessToken ?? response.access_token ?? response.token ?? response.jwt
+	if (!accessToken || typeof accessToken !== 'string') {
+		throw new ApiError('Login response is missing access token')
+	}
+
+	const refreshToken = response.refreshToken ?? response.refresh_token
+	const user = response.user ?? response.account ?? response.admin
+
+	return {
+		accessToken,
+		refreshToken: typeof refreshToken === 'string' ? refreshToken : undefined,
+		user
+	}
+}
+
+function clearLegacyAuthCache(): void {
+	if (typeof sessionStorage === 'undefined') return
+
+	try {
+		for (const key of LEGACY_AUTH_KEYS) {
+			sessionStorage.removeItem(key)
+		}
+	} catch {
+		// ignore
+	}
 }

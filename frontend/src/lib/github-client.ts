@@ -9,7 +9,9 @@ export const GH_API = 'https://api.github.com'
 function handle401Error(): void {
 	if (typeof sessionStorage === 'undefined') return
 	try {
-		useAuthStore.getState().clearAuth()
+		const authStore = useAuthStore.getState()
+		authStore.clearAuth()
+		authStore.openLoginDialog()
 	} catch (error) {
 		console.error('Failed to clear auth cache:', error)
 	}
