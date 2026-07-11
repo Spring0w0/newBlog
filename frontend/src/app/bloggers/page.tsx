@@ -11,6 +11,7 @@ import { useConfigStore } from '@/app/(home)/stores/config-store'
 import initialList from './list.json'
 import type { AvatarItem } from './components/avatar-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
+import { deleteUploadedImage } from '@/lib/file-api'
 
 export default function Page() {
 	const [bloggers, setBloggers] = useState<Blogger[]>(initialList as Blogger[])
@@ -48,18 +49,30 @@ export default function Page() {
 		setIsCreateDialogOpen(true)
 	}
 
-	const handleSaveBlogger = (updatedBlogger: Blogger) => {
+	const handleSaveBlogger = (updatedBlogger: Blogger, avatarItem?: AvatarItem) => {
 		if (editingBlogger) {
 			const updated = bloggers.map(b => (b.url === editingBlogger.url ? updatedBlogger : b))
 			setBloggers(updated)
 		} else {
 			setBloggers([...bloggers, updatedBlogger])
 		}
+		if (avatarItem) {
+			setAvatarItems(prev => new Map(prev).set(updatedBlogger.url, avatarItem))
+		}
 	}
 
 	const handleDelete = (blogger: Blogger) => {
 		if (confirm(`确定要删除 ${blogger.name} 吗？`)) {
+			const pendingAvatar = avatarItems.get(blogger.url)
+			if (pendingAvatar?.type === 'url' && pendingAvatar.fileId) {
+				void deleteUploadedImage(pendingAvatar.fileId).catch(error => console.error('清理未保存头像失败:', error))
+			}
 			setBloggers(bloggers.filter(b => b.url !== blogger.url))
+			setAvatarItems(prev => {
+				const next = new Map(prev)
+				next.delete(blogger.url)
+				return next
+			})
 		}
 	}
 
@@ -92,7 +105,11 @@ export default function Page() {
 		}
 	}
 
-	const handleCancel = () => {
+	const handleCancel = async () => {
+		const pendingFileIds = Array.from(avatarItems.values())
+			.filter((item): item is Extract<AvatarItem, { type: 'url'; fileId?: number }> => item.type === 'url' && typeof item.fileId === 'number')
+			.map(item => item.fileId as number)
+		await Promise.allSettled(pendingFileIds.map(fileId => deleteUploadedImage(fileId)))
 		setBloggers(originalBloggers)
 		setAvatarItems(new Map())
 		setIsEditMode(false)

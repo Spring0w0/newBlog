@@ -12,6 +12,7 @@ import initialList from './list.json'
 import type { Share } from './components/share-card'
 import type { LogoItem } from './components/logo-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
+import { deleteUploadedImage } from '@/lib/file-api'
 
 export default function Page() {
 	const [shares, setShares] = useState<Share[]>(initialList as Share[])
@@ -66,7 +67,16 @@ export default function Page() {
 
 	const handleDelete = (share: Share) => {
 		if (confirm(`确定要删除 ${share.name} 吗？`)) {
+			const pendingLogo = logoItems.get(share.url)
+			if (pendingLogo?.type === 'url' && pendingLogo.fileId) {
+				void deleteUploadedImage(pendingLogo.fileId).catch(error => console.error('清理未保存图标失败:', error))
+			}
 			setShares(shares.filter(s => s.url !== share.url))
+			setLogoItems(prev => {
+				const next = new Map(prev)
+				next.delete(share.url)
+				return next
+			})
 		}
 	}
 
@@ -100,7 +110,11 @@ export default function Page() {
 		}
 	}
 
-	const handleCancel = () => {
+	const handleCancel = async () => {
+		const pendingFileIds = Array.from(logoItems.values())
+			.filter((item): item is Extract<LogoItem, { type: 'url'; fileId?: number }> => item.type === 'url' && typeof item.fileId === 'number')
+			.map(item => item.fileId as number)
+		await Promise.allSettled(pendingFileIds.map(fileId => deleteUploadedImage(fileId)))
 		setShares(originalShares)
 		setLogoItems(new Map())
 		setIsEditMode(false)

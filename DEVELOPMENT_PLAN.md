@@ -25,7 +25,8 @@
 | 前端 API Client 与登录联调 | 已完成 | 浏览器端通过后端 API 访问数据 |
 | 公开站点配置、文章、分类和其他内容读取 | 已完成 | 已按根级 `controller → service → mapper → pojo/entity + pojo/vo` 拆分并完成真实数据库联调 |
 | 静态内容导入数据库 | 已完成 | 仅作为显式迁移工具，不参与正常运行时写入 |
-| 图片上传、管理端内容写入、GitHub CMS 移除 | 未开始 | 依赖后续闭环迭代 |
+| 图片上传与公开静态资源映射 | 已完成 | 六种 scope 的上传、公开访问、删除与前端各图片选择入口均已联调 |
+| 管理端内容写入、GitHub CMS 移除 | 未开始 | 依赖文章及其他内容写入闭环 |
 
 公开读取链路已完成规范化：Controller 只处理 HTTP 与参数边界并记录请求日志，Service 承载业务规则与 VO 组装，Mapper 只负责数据库访问。后续新增的管理端接口也必须遵循同一结构。
 
@@ -116,21 +117,32 @@ com.spring0w0.backend/
 - 后端请求链路满足 `Controller → Service → Mapper`。
 - Maven 测试、前端类型检查与生产构建通过。
 
-### 迭代 B：图片与文件闭环
+### 迭代 B：图片与文件闭环（已完成，2026-07-11）
 
 **目标**：让所有管理端图片都能安全上传、预览、引用和删除，不再通过 GitHub 提交二进制文件。
 
+本轮完成记录：
+
+- 已通过 Flyway `V5__create_file_assets.sql` 建立文件元数据表；文件只保存受限 `scope`、随机服务端文件名、相对路径、原始名、MIME、大小、SHA-256 与可读取尺寸，不保存或返回物理绝对路径。
+- 已实现根级 `FileController` / `FileService` / `FileAssetMapper` / `FileReferenceMapper`，提供受 `ADMIN` 与 Bearer Token 保护的上传、删除接口，以及工作区根目录 `uploads/` 的 `/images/**` 只读映射。
+- 已限制六种业务 scope，单文件最大 10MB，仅接受 JPEG、PNG、GIF、WebP；服务端同时核验声明 MIME、扩展名、真实文件签名与可读取图片内容，拒绝 SVG、空文件、伪装类型和路径穿越。
+- 删除前会检查文章封面/正文、站点配置、艺术图、背景图、博主、项目、友链和相册引用；存在引用时返回 `422`，未引用文件同时删除元数据与物理文件。
+- 前端已在统一 `file-api` 适配层封装 multipart 上传和删除；文章封面与正文图片选择后立即上传到 `blog-images`，编辑器只保留后端返回的绝对 URL / `fileId`，外部 URL 输入仍兼容。
+- 已执行后端 20 项测试、前端类型检查和生产构建；独立 8082 联调验证了“管理员登录 → 上传 200 → 公开访问 200 → 删除 200 → 原 URL 404”。实际上传文件已删除，运行期文件未进入 Git。
+- 已将同一上传能力复用到站点设置（Favicon、头像、艺术图、背景图和社交二维码）、博主、项目、友链和相册；它们分别使用 `site`、`bloggers`、`projects`、`shares`、`pictures` scope，保存后端绝对 URL，并在编辑状态保留 `fileId` 用于取消编辑或删除未保存条目时清理文件。
+- 已对 `blog-images`、`site`、`bloggers`、`projects`、`shares`、`pictures` 六种 scope 完成真实联调：每种均上传 200、公开访问 200，删除后原 URL 返回 404；测试文件均已清理。
+
 后端工作：
 
-- 按 API 契约实现文件元数据表、Flyway 迁移、`File` Entity/Mapper/Service/Controller。
+- 按 API 契约实现文件元数据表、Flyway 迁移、`FileAsset` Entity/Mapper/Service/Controller。
 - 实现 `POST /api/admin/files/images`、`DELETE /api/admin/files/{fileId}` 和 `/images/**` 映射。
 - 对 scope、图片真实类型、大小、文件名、路径穿越、引用状态和孤儿文件进行校验与处理。
 - 将物理文件写入 `uploads/blog-images`、`uploads/site`、`uploads/bloggers`、`uploads/projects`、`uploads/shares`、`uploads/pictures`。
 
 前端工作：
 
-- 在统一 API 层增加 multipart 上传能力和错误提示。
-- 先接通文章封面与正文图片上传，再复用到站点配置、博主、项目、友链和相册的上传组件。
+- 已在统一 API 层增加 multipart 上传能力和错误提示。
+- 已接通文章封面与正文图片上传，并已复用到站点配置、博主、项目、友链和相册的上传组件。
 - 所有新保存的业务数据只保存后端返回的公开 URL / 文件 ID，不自行拼接磁盘路径。
 
 验收：
@@ -247,4 +259,4 @@ com.spring0w0.backend/
 
 ## 7. 下一步
 
-进入 **迭代 B：图片与文件闭环**。开始编码前，先根据 [API 契约](backend/docs/API.md) 补全文件元数据模型、上传限制与公开映射的实现细节；随后按“后端上传/引用规则 → 前端文章图片接入 → 实际上传联调”的顺序落地。运行期文件继续统一存放在工作区根目录的 `uploads/`，不写入源码目录或 Git。
+进入 **迭代 C：文章与分类管理闭环**。开始编码前，先在 [API 契约](backend/docs/API.md) 细化文章和分类管理 DTO、管理端分页结构、slug 冲突、图片 `fileId` / URL 引用关系、事务与缓存失效规则；随后按“Flyway 引用关系 → 管理端文章/分类接口 → 前端写作与管理页替换 GitHub 写入 → 成功、401、403、404、409、422 联调”的顺序实施。只有对应数据库写入链路通过完整联调后，才能移除同功能的 GitHub CMS 代码。

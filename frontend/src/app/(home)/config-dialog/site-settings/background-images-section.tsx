@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { hashFileSHA256 } from '@/lib/file-utils'
+import { deleteUploadedImage, uploadImage } from '@/lib/file-api'
 import type { SiteContent } from '../../stores/config-store'
 import type { BackgroundImageUploads, FileItem } from './types'
 
@@ -21,32 +21,28 @@ export function BackgroundImagesSection({ formData, setFormData, backgroundImage
 		const file = e.target.files?.[0]
 		if (!file) return
 
-		if (!file.type.startsWith('image/')) {
-			toast.error('请选择图片文件')
-			return
-		}
+		try {
+			const uploaded = await uploadImage(file, 'site')
+			const id = `file-${uploaded.fileId}`
 
-		const hash = await hashFileSHA256(file)
-		const ext = file.name.split('.').pop() || 'png'
-		const id = hash
-		const targetPath = `/images/background/${id}.${ext}`
-		const previewUrl = URL.createObjectURL(file)
-
-		setBackgroundImageUploads(prev => ({
-			...prev,
-			[id]: { type: 'file', file, previewUrl, hash }
-		}))
-
-		setFormData(prev => {
-			const existing = (prev.backgroundImages ?? []) as Array<{ id: string; url: string }>
-			const filtered = existing.filter(item => item.id !== id)
-			const backgroundImages = [...filtered, { id, url: targetPath }]
-			return {
+			setBackgroundImageUploads(prev => ({
 				...prev,
-				backgroundImages: backgroundImages as any,
-				currentBackgroundImageId: prev.currentBackgroundImageId || id
-			}
-		})
+				[id]: { type: 'url', url: uploaded.url, fileId: uploaded.fileId }
+			}))
+
+			setFormData(prev => {
+				const existing = (prev.backgroundImages ?? []) as Array<{ id: string; url: string }>
+				const filtered = existing.filter(item => item.id !== id)
+				const backgroundImages = [...filtered, { id, url: uploaded.url }]
+				return {
+					...prev,
+					backgroundImages: backgroundImages as any,
+					currentBackgroundImageId: prev.currentBackgroundImageId || id
+				}
+			})
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '背景图片上传失败')
+		}
 
 		setBackgroundUrlInput('')
 		if (e.currentTarget) e.currentTarget.value = ''
@@ -86,10 +82,18 @@ export function BackgroundImagesSection({ formData, setFormData, backgroundImage
 		}))
 	}
 
-	const handleRemoveBackgroundImage = (id: string) => {
+	const handleRemoveBackgroundImage = async (id: string) => {
 		const uploadItem = backgroundImageUploads[id]
-		if (uploadItem?.type === 'file') {
-			URL.revokeObjectURL(uploadItem.previewUrl)
+		try {
+			if (uploadItem?.type === 'url' && uploadItem.fileId) {
+				await deleteUploadedImage(uploadItem.fileId)
+			}
+			if (uploadItem?.type === 'file') {
+				URL.revokeObjectURL(uploadItem.previewUrl)
+			}
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '背景图片删除失败')
+			return
 		}
 
 		setBackgroundImageUploads(prev => {
@@ -148,7 +152,7 @@ export function BackgroundImagesSection({ formData, setFormData, backgroundImage
 								)}
 								<button
 									type='button'
-									onClick={() => handleRemoveBackgroundImage(item.id)}
+								onClick={() => void handleRemoveBackgroundImage(item.id)}
 									className='text-secondary absolute top-1 right-1 hidden rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] shadow group-hover:block'>
 									删除
 								</button>

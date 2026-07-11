@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { hashFileSHA256 } from '@/lib/file-utils'
+import { deleteUploadedImage, uploadImage } from '@/lib/file-api'
 import type { SiteContent } from '../../stores/config-store'
 import type { ArtImageUploads, FileItem } from './types'
 
@@ -21,33 +21,29 @@ export function ArtImagesSection({ formData, setFormData, artImageUploads, setAr
 		const files = Array.from(e.target.files || [])
 		if (!files.length) return
 
-		for (const file of files) {
-			if (!file.type.startsWith('image/')) {
-				toast.error('请选择图片文件')
-				continue
-			}
+		try {
+			for (const file of files) {
+				const uploaded = await uploadImage(file, 'site')
+				const id = `file-${uploaded.fileId}`
 
-			const hash = await hashFileSHA256(file)
-			const ext = file.name.split('.').pop() || 'png'
-			const id = hash
-			const targetPath = `/images/art/${id}.${ext}`
-			const previewUrl = URL.createObjectURL(file)
-
-			setArtImageUploads(prev => ({
-				...prev,
-				[id]: { type: 'file', file, previewUrl, hash }
-			}))
-
-			setFormData(prev => {
-				const existing = prev.artImages ?? []
-				const filtered = existing.filter(item => item.id !== id)
-				const artImages = [...filtered, { id, url: targetPath }]
-				return {
+				setArtImageUploads(prev => ({
 					...prev,
-					artImages,
-					currentArtImageId: prev.currentArtImageId || id
-				}
-			})
+					[id]: { type: 'url', url: uploaded.url, fileId: uploaded.fileId }
+				}))
+
+				setFormData(prev => {
+					const existing = prev.artImages ?? []
+					const filtered = existing.filter(item => item.id !== id)
+					const artImages = [...filtered, { id, url: uploaded.url }]
+					return {
+						...prev,
+						artImages,
+						currentArtImageId: prev.currentArtImageId || id
+					}
+				})
+			}
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Art 图片上传失败')
 		}
 
 		setArtUrlInput('')
@@ -81,10 +77,18 @@ export function ArtImagesSection({ formData, setFormData, artImageUploads, setAr
 		}))
 	}
 
-	const handleRemoveArtImage = (id: string) => {
+	const handleRemoveArtImage = async (id: string) => {
 		const uploadItem = artImageUploads[id]
-		if (uploadItem?.type === 'file') {
+		try {
+			if (uploadItem?.type === 'url' && uploadItem.fileId) {
+				await deleteUploadedImage(uploadItem.fileId)
+			}
+			if (uploadItem?.type === 'file') {
 			URL.revokeObjectURL(uploadItem.previewUrl)
+			}
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Art 图片删除失败')
+			return
 		}
 
 		setArtImageUploads(prev => {
@@ -131,7 +135,7 @@ export function ArtImagesSection({ formData, setFormData, artImageUploads, setAr
 							)}
 							<button
 								type='button'
-								onClick={() => handleRemoveArtImage(item.id)}
+								onClick={() => void handleRemoveArtImage(item.id)}
 								className='text-secondary absolute top-1 right-1 hidden rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] shadow group-hover:block'>
 								删除
 							</button>

@@ -10,7 +10,7 @@ type CoverSectionProps = {
 }
 
 export function CoverSection({ delay = 0 }: CoverSectionProps) {
-	const { images, setCover, cover, addFiles } = useWriteStore()
+	const { images, setCover, cover, uploadFiles } = useWriteStore()
 	const fileInputRef = useRef<HTMLInputElement>(null)
 
 	const coverPreviewUrl = cover ? (cover.type === 'url' ? cover.url : cover.previewUrl) : null
@@ -49,7 +49,7 @@ export function CoverSection({ delay = 0 }: CoverSectionProps) {
 				return
 			}
 
-			const resultImages = await addFiles(imageFiles as unknown as FileList)
+			const resultImages = await uploadFiles(imageFiles)
 			if (resultImages && resultImages.length > 0) {
 				// 使用第一个图片作为封面
 				setCover(resultImages[0])
@@ -67,7 +67,7 @@ export function CoverSection({ delay = 0 }: CoverSectionProps) {
 		const files = e.target.files
 		if (!files || files.length === 0) return
 
-		const resultImages = await addFiles(files)
+		const resultImages = await uploadFiles(files)
 		if (resultImages && resultImages.length > 0) {
 			// 使用第一个图片作为封面
 			setCover(resultImages[0])

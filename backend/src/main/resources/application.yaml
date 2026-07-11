@@ -24,6 +24,10 @@ app:
       issuer: newblog
   cors:
     allowed-origins: http://localhost:3000
+  upload:
+    root-dir: ${UPLOAD_ROOT_DIR:uploads}
+    public-path: /images
+    max-file-size: 10MB
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

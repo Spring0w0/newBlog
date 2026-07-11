@@ -7,6 +7,7 @@ import { DialogModal } from '@/components/dialog-modal'
 import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '../stores/config-store'
 import { pushSiteContent } from '../services/push-site-content'
+import { deleteUploadedImage } from '@/lib/file-api'
 import type { SiteContent, CardStyles } from '../stores/config-store'
 import { SiteSettings, type FileItem, type ArtImageUploads, type BackgroundImageUploads, type SocialButtonImageUploads } from './site-settings'
 import { ColorConfig } from './color-config'
@@ -127,7 +128,24 @@ export default function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 		}
 	}
 
-	const handleCancel = () => {
+	const handleCancel = async () => {
+		const pendingFileIds = [
+			faviconItem,
+			avatarItem,
+			...Object.values(artImageUploads),
+			...Object.values(backgroundImageUploads),
+			...Object.values(socialButtonImageUploads)
+		]
+			.filter((item): item is Extract<FileItem, { type: 'url'; fileId?: number }> => item?.type === 'url' && typeof item.fileId === 'number')
+			.map(item => item.fileId as number)
+
+		if (pendingFileIds.length > 0) {
+			const results = await Promise.allSettled(pendingFileIds.map(fileId => deleteUploadedImage(fileId)))
+			if (results.some(result => result.status === 'rejected')) {
+				toast.error('部分未保存图片清理失败，可稍后在文件管理中处理')
+			}
+		}
+
 		// Clean up preview URLs
 		if (faviconItem?.type === 'file') {
 			URL.revokeObjectURL(faviconItem.previewUrl)

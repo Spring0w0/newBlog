@@ -11,6 +11,8 @@ public enum ResultCode {
     NOT_FOUND(404, "资源不存在"),
     CONFLICT(409, "数据冲突"),
     FILE_TOO_LARGE(413, "上传文件超出大小限制"),
+    UNSUPPORTED_MEDIA_TYPE(415, "不支持的文件类型"),
+    FILE_IN_USE(422, "文件仍被业务数据引用，不能删除"),
     LOGIN_FAILED(401, "用户名或密码错误"),
     ACCOUNT_DISABLED(403, "账号已被禁用"),
     INTERNAL_SERVER_ERROR(500, "服务器内部错误");

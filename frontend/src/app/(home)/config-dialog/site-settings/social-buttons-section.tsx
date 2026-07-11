@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import type { SiteContent } from '../../stores/config-store'
 import { Select } from '@/components/select'
 import type { SocialButtonImageUploads } from './types'
-import { hashFileSHA256 } from '@/lib/file-utils'
+import { deleteUploadedImage, uploadImage } from '@/lib/file-api'
 
 type SocialButtonType =
 	| 'github'
@@ -98,33 +98,36 @@ export function SocialButtonsSection({ formData, setFormData, socialButtonImageU
 		const file = e.target.files?.[0]
 		if (!file) return
 
-		if (!file.type.startsWith('image/')) {
-			toast.error('请选择图片文件')
-			return
+		try {
+			const uploaded = await uploadImage(file, 'site')
+			setSocialButtonImageUploads(prev => ({
+				...prev,
+				[buttonId]: { type: 'url', url: uploaded.url, fileId: uploaded.fileId }
+			}))
+
+			setFormData(prev => ({
+				...prev,
+				socialButtons: (prev.socialButtons || []).map(btn => (btn.id === buttonId ? { ...btn, value: uploaded.url } : btn))
+			}))
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '社交图片上传失败')
+		} finally {
+			if (e.currentTarget) e.currentTarget.value = ''
 		}
-
-		const hash = await hashFileSHA256(file)
-		const ext = file.name.split('.').pop() || 'png'
-		const targetPath = `/images/social-buttons/${hash}.${ext}`
-		const previewUrl = URL.createObjectURL(file)
-
-		setSocialButtonImageUploads(prev => ({
-			...prev,
-			[buttonId]: { type: 'file', file, previewUrl, hash }
-		}))
-
-		setFormData(prev => ({
-			...prev,
-			socialButtons: (prev.socialButtons || []).map(btn => (btn.id === buttonId ? { ...btn, value: targetPath } : btn))
-		}))
-
-		if (e.currentTarget) e.currentTarget.value = ''
 	}
 
-	const handleRemoveImage = (buttonId: string) => {
+	const handleRemoveImage = async (buttonId: string) => {
 		const uploadItem = socialButtonImageUploads[buttonId]
-		if (uploadItem?.type === 'file') {
-			URL.revokeObjectURL(uploadItem.previewUrl)
+		try {
+			if (uploadItem?.type === 'url' && uploadItem.fileId) {
+				await deleteUploadedImage(uploadItem.fileId)
+			}
+			if (uploadItem?.type === 'file') {
+				URL.revokeObjectURL(uploadItem.previewUrl)
+			}
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '社交图片删除失败')
+			return
 		}
 
 		setSocialButtonImageUploads(prev => {
@@ -195,11 +198,11 @@ export function SocialButtonsSection({ formData, setFormData, socialButtonImageU
 											placeholder={button.type === 'wechat' ? '微信号或二维码链接' : 'QQ号或二维码链接'}
 											className='bg-secondary/10 flex-1 rounded-lg border px-3 py-1.5 text-xs'
 										/>
-										<button type='button' onClick={() => handleRemoveImage(button.id)} className='text-xs text-red-500 hover:text-red-600'>
+										<button type='button' onClick={() => void handleRemoveImage(button.id)} className='text-xs text-red-500 hover:text-red-600'>
 											删除图片
 										</button>
 									</div>
-								) : button.value && button.value.startsWith('/images/social-buttons/') ? (
+								) : button.value && (button.value.startsWith('/images/social-buttons/') || button.value.includes('/images/site/')) ? (
 									<div className='relative flex flex-1 items-center gap-2'>
 										<img src={button.value} alt='preview' className='h-10 w-10 rounded-lg object-cover' />
 										<input

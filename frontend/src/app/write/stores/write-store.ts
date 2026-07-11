@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { toast } from 'sonner'
 import { hashFileSHA256 } from '@/lib/file-utils'
 import { loadBlog } from '@/lib/load-blog'
+import { deleteUploadedImage, uploadImage, validateImageForUpload } from '@/lib/file-api'
 import type { PublishForm, ImageItem } from '../types'
 
 export const formatDateTimeLocal = (date: Date = new Date()): string => {
@@ -27,9 +28,10 @@ type WriteStore = {
 
 	// Image state
 	images: ImageItem[]
-	addUrlImage: (url: string) => void
+	addUrlImage: (url: string) => ImageItem
 	addFiles: (files: FileList | File[]) => Promise<ImageItem[]>
-	deleteImage: (id: string) => void
+	uploadFiles: (files: FileList | File[]) => Promise<ImageItem[]>
+	deleteImage: (id: string) => Promise<void>
 
 	// Cover state
 	cover: ImageItem | null
@@ -72,13 +74,15 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 	images: [],
 	addUrlImage: url => {
 		const { images } = get()
-		const exists = images.some(it => it.type === 'url' && it.url === url)
-		if (exists) {
+		const existing = images.find(it => it.type === 'url' && it.url === url)
+		if (existing) {
 			toast.info('该图片已在列表中')
-			return
+			return existing
 		}
 		const id = Math.random().toString(36).slice(2, 10)
-		set(state => ({ images: [{ id, type: 'url', url }, ...state.images] }))
+		const image: ImageItem = { id, type: 'url', url }
+		set(state => ({ images: [image, ...state.images] }))
+		return image
 	},
 	addFiles: async (files: FileList | File[]) => {
 		const { images } = get()
@@ -132,19 +136,88 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 
 		return resultImages
 	},
-	deleteImage: id =>
-		set(state => {
-			for (const it of state.images) {
-				if (it.type === 'file' && it.id === id) {
-					URL.revokeObjectURL(it.previewUrl)
+	uploadFiles: async files => {
+		const candidates = Array.from(files)
+		if (candidates.length === 0) return []
 
-					if (it.id === state.cover?.id) {
-						set({ cover: null })
-					}
+		try {
+			for (const file of candidates) validateImageForUpload(file)
+
+			const { images } = get()
+			const existingHashes = new Map<string, ImageItem>(
+				images.filter(image => image.hash).map(image => [image.hash as string, image])
+			)
+			const computed = await Promise.all(
+				candidates.map(async file => ({ file, hash: await hashFileSHA256(file) }))
+			)
+			const seen = new Set<string>()
+			const resultImages: ImageItem[] = []
+			const pendingUploads = computed.filter(({ hash }) => {
+				const existing = existingHashes.get(hash)
+				if (existing) {
+					resultImages.push(existing)
+					return false
 				}
+				if (seen.has(hash)) return false
+				seen.add(hash)
+				return true
+			})
+
+			for (const { file, hash } of pendingUploads) {
+				const uploaded = await uploadImage(file, 'blog-images')
+				resultImages.push({
+					id: Math.random().toString(36).slice(2, 10),
+					type: 'url',
+					url: uploaded.url,
+					fileId: uploaded.fileId,
+					filename: uploaded.fileName,
+					hash
+				})
 			}
-			return { images: state.images.filter(it => it.id !== id) }
-		}),
+
+			const newImages = resultImages.filter(image => !images.some(existing => existing.id === image.id))
+			if (newImages.length > 0) {
+				set(state => ({ images: [...newImages, ...state.images] }))
+			}
+			if (pendingUploads.length > 0) {
+				toast.success(`已上传 ${pendingUploads.length} 张图片`)
+			} else {
+				toast.info('图片已在列表中，不会重复上传')
+			}
+			return resultImages
+		} catch (error) {
+			const message = error instanceof Error ? error.message : '图片上传失败'
+			toast.error(message)
+			throw error
+		}
+	},
+	deleteImage: async id => {
+		const image = get().images.find(item => item.id === id)
+		if (!image) return
+		const markdownReference = image.type === 'url' ? image.url : `local-image:${image.id}`
+		if (get().form.md.includes(`(${markdownReference})`)) {
+			toast.error('图片仍在文章正文中使用，请先移除 Markdown 引用')
+			return
+		}
+
+		try {
+			if (image.type === 'url' && image.fileId) {
+				await deleteUploadedImage(image.fileId)
+			}
+			if (image.type === 'file') {
+				URL.revokeObjectURL(image.previewUrl)
+			}
+			set(state => ({
+				images: state.images.filter(item => item.id !== id),
+				cover: state.cover?.id === id ? null : state.cover
+			}))
+			toast.success('图片已删除')
+		} catch (error) {
+			const message = error instanceof Error ? error.message : '图片删除失败'
+			toast.error(message)
+			throw error
+		}
+	},
 
 	// Cover state
 	cover: null,

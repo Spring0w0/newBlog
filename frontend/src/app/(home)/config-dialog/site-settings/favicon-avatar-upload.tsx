@@ -2,17 +2,20 @@
 
 import { useRef } from 'react'
 import { toast } from 'sonner'
-import { hashFileSHA256 } from '@/lib/file-utils'
+import { deleteUploadedImage, uploadImage } from '@/lib/file-api'
 import type { FileItem } from './types'
+import type { SiteContent } from '../../stores/config-store'
 
 interface FaviconAvatarUploadProps {
+	formData: SiteContent
+	setFormData: React.Dispatch<React.SetStateAction<SiteContent>>
 	faviconItem: FileItem | null
 	setFaviconItem: React.Dispatch<React.SetStateAction<FileItem | null>>
 	avatarItem: FileItem | null
 	setAvatarItem: React.Dispatch<React.SetStateAction<FileItem | null>>
 }
 
-export function FaviconAvatarUpload({ faviconItem, setFaviconItem, avatarItem, setAvatarItem }: FaviconAvatarUploadProps) {
+export function FaviconAvatarUpload({ formData, setFormData, faviconItem, setFaviconItem, avatarItem, setAvatarItem }: FaviconAvatarUploadProps) {
 	const faviconInputRef = useRef<HTMLInputElement>(null)
 	const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -20,30 +23,36 @@ export function FaviconAvatarUpload({ faviconItem, setFaviconItem, avatarItem, s
 		const file = e.target.files?.[0]
 		if (!file) return
 
-		if (!file.type.startsWith('image/')) {
-			toast.error('请选择图片文件')
-			return
+		try {
+			const uploaded = await uploadImage(file, 'site')
+			if (faviconItem?.type === 'url' && faviconItem.fileId) {
+				await deleteUploadedImage(faviconItem.fileId)
+			}
+			setFaviconItem({ type: 'url', url: uploaded.url, fileId: uploaded.fileId })
+			setFormData(prev => ({ ...prev, faviconUrl: uploaded.url }))
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : 'Favicon 上传失败')
+		} finally {
+			if (e.currentTarget) e.currentTarget.value = ''
 		}
-
-		const hash = await hashFileSHA256(file)
-		const previewUrl = URL.createObjectURL(file)
-		setFaviconItem({ type: 'file', file, previewUrl, hash })
-		if (e.currentTarget) e.currentTarget.value = ''
 	}
 
 	const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0]
 		if (!file) return
 
-		if (!file.type.startsWith('image/')) {
-			toast.error('请选择图片文件')
-			return
+		try {
+			const uploaded = await uploadImage(file, 'site')
+			if (avatarItem?.type === 'url' && avatarItem.fileId) {
+				await deleteUploadedImage(avatarItem.fileId)
+			}
+			setAvatarItem({ type: 'url', url: uploaded.url, fileId: uploaded.fileId })
+			setFormData(prev => ({ ...prev, avatarUrl: uploaded.url }))
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '头像上传失败')
+		} finally {
+			if (e.currentTarget) e.currentTarget.value = ''
 		}
-
-		const hash = await hashFileSHA256(file)
-		const previewUrl = URL.createObjectURL(file)
-		setAvatarItem({ type: 'file', file, previewUrl, hash })
-		if (e.currentTarget) e.currentTarget.value = ''
 	}
 
 	return (
@@ -52,8 +61,8 @@ export function FaviconAvatarUpload({ faviconItem, setFaviconItem, avatarItem, s
 				<label className='mb-2 block text-sm font-medium'>Favicon</label>
 				<input ref={faviconInputRef} type='file' accept='image/*' className='hidden' onChange={handleFaviconFileSelect} />
 				<div className='group relative h-20 w-20 cursor-pointer overflow-hidden rounded-lg border bg-white/60'>
-					{faviconItem?.type === 'file' ? (
-						<img src={faviconItem.previewUrl} alt='favicon preview' className='h-full w-full object-cover' />
+					{faviconItem || formData.faviconUrl ? (
+						<img src={faviconItem ? (faviconItem.type === 'file' ? faviconItem.previewUrl : faviconItem.url) : formData.faviconUrl} alt='favicon preview' className='h-full w-full object-cover' />
 					) : (
 						<img src='/favicon.png' alt='current favicon' className='h-full w-full object-cover' />
 					)}
@@ -69,8 +78,8 @@ export function FaviconAvatarUpload({ faviconItem, setFaviconItem, avatarItem, s
 				<label className='mb-2 block text-sm font-medium'>Avatar</label>
 				<input ref={avatarInputRef} type='file' accept='image/*' className='hidden' onChange={handleAvatarFileSelect} />
 				<div className='group relative h-20 w-20 cursor-pointer overflow-hidden rounded-full border bg-white/60'>
-					{avatarItem?.type === 'file' ? (
-						<img src={avatarItem.previewUrl} alt='avatar preview' className='h-full w-full object-cover' />
+					{avatarItem || formData.avatarUrl ? (
+						<img src={avatarItem ? (avatarItem.type === 'file' ? avatarItem.previewUrl : avatarItem.url) : formData.avatarUrl} alt='avatar preview' className='h-full w-full object-cover' />
 					) : (
 						<img src='/images/avatar.png' alt='current avatar' className='h-full w-full object-cover' />
 					)}

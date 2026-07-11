@@ -11,6 +11,7 @@ import { useConfigStore } from '@/app/(home)/stores/config-store'
 import initialList from './list.json'
 import type { ImageItem } from './components/image-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
+import { deleteUploadedImage } from '@/lib/file-api'
 
 export default function Page() {
 	const [projects, setProjects] = useState<Project[]>(initialList as Project[])
@@ -48,18 +49,30 @@ export default function Page() {
 		setIsCreateDialogOpen(true)
 	}
 
-	const handleSaveProject = (updatedProject: Project) => {
+	const handleSaveProject = (updatedProject: Project, imageItem?: ImageItem) => {
 		if (editingProject) {
 			const updated = projects.map(p => (p.url === editingProject.url ? updatedProject : p))
 			setProjects(updated)
 		} else {
 			setProjects([...projects, updatedProject])
 		}
+		if (imageItem) {
+			setImageItems(prev => new Map(prev).set(updatedProject.url, imageItem))
+		}
 	}
 
 	const handleDelete = (project: Project) => {
 		if (confirm(`确定要删除 ${project.name} 吗？`)) {
+			const pendingImage = imageItems.get(project.url)
+			if (pendingImage?.type === 'url' && pendingImage.fileId) {
+				void deleteUploadedImage(pendingImage.fileId).catch(error => console.error('清理未保存项目图片失败:', error))
+			}
 			setProjects(projects.filter(p => p.url !== project.url))
+			setImageItems(prev => {
+				const next = new Map(prev)
+				next.delete(project.url)
+				return next
+			})
 		}
 	}
 
@@ -92,7 +105,11 @@ export default function Page() {
 		}
 	}
 
-	const handleCancel = () => {
+	const handleCancel = async () => {
+		const pendingFileIds = Array.from(imageItems.values())
+			.filter((item): item is Extract<ImageItem, { type: 'url'; fileId?: number }> => item.type === 'url' && typeof item.fileId === 'number')
+			.map(item => item.fileId as number)
+		await Promise.allSettled(pendingFileIds.map(fileId => deleteUploadedImage(fileId)))
 		setProjects(originalProjects)
 		setImageItems(new Map())
 		setIsEditMode(false)

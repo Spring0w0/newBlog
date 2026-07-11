@@ -33,5 +33,6 @@ app:
   cors:
     allowed-origins: http://localhost:2025,http://localhost:3000
   upload:
-    root-dir: D:/develop/newBlog/uploads/blog-images
+    root-dir: D:/develop/newBlog/uploads
     public-path: /images
+    max-file-size: 10MB

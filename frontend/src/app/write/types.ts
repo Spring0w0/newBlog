@@ -9,4 +9,6 @@ export type PublishForm = {
 	category?: string
 }
 
-export type ImageItem = { id: string; type: 'url'; url: string } | { id: string; type: 'file'; file: File; previewUrl: string; filename: string; hash?: string }
+export type ImageItem =
+	| { id: string; type: 'url'; url: string; fileId?: number; filename?: string; hash?: string }
+	| { id: string; type: 'file'; file: File; previewUrl: string; filename: string; hash?: string }

@@ -37,5 +37,6 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
   upload:
-    root-dir: ${BLOG_UPLOAD_ROOT:/data/blog-images}
+    root-dir: ${UPLOAD_ROOT_DIR:/data/newblog/uploads}
     public-path: /images
+    max-file-size: 10MB

@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { DialogModal } from '@/components/dialog-modal'
 import type { ImageItem } from '../../projects/components/image-upload-dialog'
+import { uploadImage } from '@/lib/file-api'
 
 interface UploadDialogProps {
 	onClose: () => void
@@ -14,6 +15,7 @@ interface UploadDialogProps {
 export default function UploadDialog({ onClose, onSubmit }: UploadDialogProps) {
 	const [description, setDescription] = useState('')
 	const [images, setImages] = useState<ImageItem[]>([])
+	const [isUploading, setIsUploading] = useState(false)
 	const fileInputRef = useRef<HTMLInputElement>(null)
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,20 +41,36 @@ export default function UploadDialog({ onClose, onSubmit }: UploadDialogProps) {
 		setImages(nextImages)
 	}
 
-	const handleSubmit = () => {
+	const handleSubmit = async () => {
 		if (images.length === 0) {
 			toast.error('请至少选择一张图片')
 			return
 		}
 
-		onSubmit({
-			images,
-			description
-		})
+		try {
+			setIsUploading(true)
+			const uploadedImages = await Promise.all(
+				images.map(async image => {
+					if (image.type === 'url') return image
+					const uploaded = await uploadImage(image.file, 'pictures')
+					URL.revokeObjectURL(image.previewUrl)
+					return { type: 'url' as const, url: uploaded.url, fileId: uploaded.fileId }
+				})
+			)
 
-		setImages([])
-		setDescription('')
-		onClose()
+			onSubmit({
+				images: uploadedImages,
+				description
+			})
+
+			setImages([])
+			setDescription('')
+			onClose()
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '相册图片上传失败')
+		} finally {
+			setIsUploading(false)
+		}
 	}
 
 	const handleClose = () => {
@@ -135,8 +153,8 @@ export default function UploadDialog({ onClose, onSubmit }: UploadDialogProps) {
 						className='flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm transition-colors hover:bg-gray-50'>
 						取消
 					</button>
-					<button type='button' onClick={handleSubmit} className='brand-btn flex-1 justify-center px-4'>
-						确认上传
+					<button type='button' disabled={isUploading} onClick={handleSubmit} className='brand-btn flex-1 justify-center px-4 disabled:cursor-not-allowed disabled:opacity-60'>
+						{isUploading ? '上传中...' : '确认上传'}
 					</button>
 				</div>
 			</div>

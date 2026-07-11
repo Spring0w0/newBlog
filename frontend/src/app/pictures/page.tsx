@@ -12,6 +12,7 @@ import { useConfigStore } from '@/app/(home)/stores/config-store'
 import type { ImageItem } from '../projects/components/image-upload-dialog'
 import { useRouter } from 'next/navigation'
 import { usePublicResource } from '@/hooks/use-public-resource'
+import { deleteUploadedImage } from '@/lib/file-api'
 
 export interface Picture {
 	id: string
@@ -64,7 +65,7 @@ export default function Page() {
 		const newMap = new Map(imageItems)
 
 		images.forEach((imageItem, index) => {
-			if (imageItem.type === 'file') {
+			if (imageItem.type === 'file' || imageItem.fileId) {
 				newMap.set(`${id}::${index}`, imageItem)
 			}
 		})
@@ -75,6 +76,21 @@ export default function Page() {
 	}
 
 	const handleDeleteSingleImage = (pictureId: string, imageIndex: number | 'single') => {
+		const releasePendingImage = (key: string) => {
+			const item = imageItems.get(key)
+			if (item?.type === 'url' && item.fileId) {
+				void deleteUploadedImage(item.fileId).catch(error => console.error('清理未保存相册图片失败:', error))
+			}
+		}
+
+		if (imageIndex === 'single') {
+			Array.from(imageItems.keys())
+				.filter(key => key.startsWith(`${pictureId}::`))
+				.forEach(releasePendingImage)
+		} else {
+			releasePendingImage(`${pictureId}::${imageIndex}`)
+		}
+
 		setPictures(prev => {
 			return prev
 				.map(picture => {
@@ -150,6 +166,14 @@ export default function Page() {
 	const handleDeleteGroup = (picture: Picture) => {
 		if (!confirm('确定要删除这一组图片吗？')) return
 
+		Array.from(imageItems.entries())
+			.filter(([key]) => key.startsWith(`${picture.id}::`))
+			.forEach(([, item]) => {
+				if (item.type === 'url' && item.fileId) {
+					void deleteUploadedImage(item.fileId).catch(error => console.error('清理未保存相册图片失败:', error))
+				}
+			})
+
 		setPictures(prev => prev.filter(p => p.id !== picture.id))
 		setImageItems(prev => {
 			const next = new Map(prev)
@@ -191,7 +215,11 @@ export default function Page() {
 		}
 	}
 
-	const handleCancel = () => {
+	const handleCancel = async () => {
+		const pendingFileIds = Array.from(imageItems.values())
+			.filter((item): item is Extract<ImageItem, { type: 'url'; fileId?: number }> => item.type === 'url' && typeof item.fileId === 'number')
+			.map(item => item.fileId as number)
+		await Promise.allSettled(pendingFileIds.map(fileId => deleteUploadedImage(fileId)))
 		setPictures(originalPictures)
 		setImageItems(new Map())
 		setIsEditMode(false)

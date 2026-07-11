@@ -10,7 +10,7 @@ type ImagesSectionProps = {
 }
 
 export function ImagesSection({ delay = 0 }: ImagesSectionProps) {
-	const { images, cover, addUrlImage, addFiles, deleteImage } = useWriteStore()
+	const { images, cover, addUrlImage, uploadFiles, deleteImage } = useWriteStore()
 	const [urlInput, setUrlInput] = useState<string>('')
 	const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -51,11 +51,15 @@ export function ImagesSection({ delay = 0 }: ImagesSectionProps) {
 				accept='image/*'
 				multiple
 				className='hidden'
-				onChange={e => {
-					const files = e.target.files
-					if (files && files.length > 0) {
-						addFiles(files)
-					}
+					onChange={async e => {
+						const files = e.target.files
+						if (files && files.length > 0) {
+							try {
+								await uploadFiles(files)
+							} catch (error) {
+								console.error('图片上传失败:', error)
+							}
+						}
 					if (e.currentTarget) e.currentTarget.value = ''
 				}}
 			/>
@@ -71,7 +75,9 @@ export function ImagesSection({ delay = 0 }: ImagesSectionProps) {
 					onDrop={e => {
 						e.preventDefault()
 						const files = e.dataTransfer.files
-						if (files && files.length) addFiles(files)
+						if (files && files.length) {
+							void uploadFiles(files).catch(error => console.error('图片上传失败:', error))
+						}
 					}}>
 					<span className='text-2xl leading-none text-neutral-400'>+</span>
 				</div>
@@ -97,7 +103,10 @@ export function ImagesSection({ delay = 0 }: ImagesSectionProps) {
 							/>
 							{isCover && <div className='absolute top-1 left-1 rounded-md bg-blue-500 px-1.5 py-0.5 text-white shadow'>封面</div>}
 							<div className='absolute top-1 right-1 hidden group-hover:flex'>
-								<button type='button' className='rounded-md bg-white/80 px-1.5 py-0.5 shadow hover:bg-white' onClick={() => deleteImage(item.id)}>
+								<button
+									type='button'
+									className='rounded-md bg-white/80 px-1.5 py-0.5 shadow hover:bg-white'
+									onClick={() => void deleteImage(item.id).catch(error => console.error('图片删除失败:', error))}>
 									删除
 								</button>
 							</div>

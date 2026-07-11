@@ -4,8 +4,9 @@ import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { DialogModal } from '@/components/dialog-modal'
+import { uploadImage } from '@/lib/file-api'
 
-export type LogoItem = { type: 'url'; url: string } | { type: 'file'; file: File; previewUrl: string; hash?: string }
+export type LogoItem = { type: 'url'; url: string; fileId?: number } | { type: 'file'; file: File; previewUrl: string; hash?: string }
 
 interface LogoUploadDialogProps {
 	currentLogo?: string
@@ -16,6 +17,7 @@ interface LogoUploadDialogProps {
 export default function LogoUploadDialog({ currentLogo, onClose, onSubmit }: LogoUploadDialogProps) {
 	const [urlInput, setUrlInput] = useState(currentLogo || '')
 	const [previewFile, setPreviewFile] = useState<{ file: File; previewUrl: string } | null>(null)
+	const [isUploading, setIsUploading] = useState(false)
 	const fileInputRef = useRef<HTMLInputElement>(null)
 
 	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,28 +34,30 @@ export default function LogoUploadDialog({ currentLogo, onClose, onSubmit }: Log
 		setUrlInput('')
 	}
 
-	const handleSubmit = (e: React.FormEvent) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		if (previewFile) {
-			onSubmit({
-				type: 'file',
-				file: previewFile.file,
-				previewUrl: previewFile.previewUrl
-			})
-		} else if (urlInput.trim()) {
-			onSubmit({
-				type: 'url',
-				url: urlInput.trim()
-			})
-		} else {
-			toast.error('请上传图片或输入 URL')
-			return
-		}
+		try {
+			if (previewFile) {
+				setIsUploading(true)
+				const uploaded = await uploadImage(previewFile.file, 'shares')
+				URL.revokeObjectURL(previewFile.previewUrl)
+				onSubmit({ type: 'url', url: uploaded.url, fileId: uploaded.fileId })
+			} else if (urlInput.trim()) {
+				onSubmit({ type: 'url', url: urlInput.trim() })
+			} else {
+				toast.error('请上传图片或输入 URL')
+				return
+			}
 
-		setPreviewFile(null)
-		setUrlInput(currentLogo || '')
-		onClose()
+			setPreviewFile(null)
+			setUrlInput(currentLogo || '')
+			onClose()
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : '图标上传失败')
+		} finally {
+			setIsUploading(false)
+		}
 	}
 
 	const handleClose = () => {
@@ -112,8 +116,8 @@ export default function LogoUploadDialog({ currentLogo, onClose, onSubmit }: Log
 				</div>
 
 				<div className='flex gap-3 pt-2'>
-					<button type='submit' className='brand-btn flex-1 justify-center rounded-lg px-6 py-2.5'>
-						确认
+					<button type='submit' disabled={isUploading} className='brand-btn flex-1 justify-center rounded-lg px-6 py-2.5 disabled:cursor-not-allowed disabled:opacity-60'>
+						{isUploading ? '上传中...' : '确认'}
 					</button>
 					<button
 						type='button'
