@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import siteContent from '@/config/site-content.json'
 import cardStyles from '@/config/card-styles.json'
+import { getPublic } from '@/lib/public-api'
 
 export type SiteContent = typeof siteContent
 export type CardStyles = typeof cardStyles
@@ -14,6 +15,7 @@ interface ConfigStore {
 	setCardStyles: (styles: CardStyles) => void
 	resetSiteContent: () => void
 	resetCardStyles: () => void
+	refreshPublicConfig: () => Promise<void>
 	regenerateBubbles: () => void
 	setConfigDialogOpen: (open: boolean) => void
 }
@@ -34,6 +36,13 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 	},
 	resetCardStyles: () => {
 		set({ cardStyles: { ...cardStyles } })
+	},
+	refreshPublicConfig: async () => {
+		const [nextSiteContent, nextCardStyles] = await Promise.all([
+			getPublic<SiteContent>('/api/site/config'),
+			getPublic<CardStyles>('/api/site/card-styles')
+		])
+		set({ siteContent: nextSiteContent, cardStyles: nextCardStyles })
 	},
 	regenerateBubbles: () => {
 		set(state => ({ regenerateKey: state.regenerateKey + 1 }))

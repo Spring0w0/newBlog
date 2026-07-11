@@ -37,5 +37,9 @@ mybatis-plus:
 springdoc:
   api-docs:
     path: /v3/api-docs
+  packages-to-scan: com.spring0w0.backend.controller
+  paths-to-match: /api/**
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger
+    operations-sorter: alpha
+    tags-sorter: alpha

@@ -1,5 +1,5 @@
 'use client'
-import { PropsWithChildren } from 'react'
+import { PropsWithChildren, useEffect } from 'react'
 import { useCenterInit } from '@/hooks/use-center'
 import BlurredBubblesBackground from './backgrounds/blurred-bubbles'
 import NavCard from '@/components/nav-card'
@@ -14,8 +14,27 @@ import { AuthLoginDialog } from '@/components/auth-login-dialog'
 export default function Layout({ children }: PropsWithChildren) {
 	useCenterInit()
 	useSizeInit()
-	const { cardStyles, siteContent, regenerateKey } = useConfigStore()
+	const { cardStyles, siteContent, regenerateKey, refreshPublicConfig } = useConfigStore()
 	const { maxSM, init } = useSize()
+
+	useEffect(() => {
+		void refreshPublicConfig().catch(error => {
+			console.warn('Failed to load public site configuration:', error)
+		})
+	}, [refreshPublicConfig])
+
+	useEffect(() => {
+		const theme = siteContent.theme
+		const rootStyle = document.documentElement.style
+		rootStyle.setProperty('--color-brand', theme.colorBrand)
+		rootStyle.setProperty('--color-primary', theme.colorPrimary)
+		rootStyle.setProperty('--color-secondary', theme.colorSecondary)
+		rootStyle.setProperty('--color-brand-secondary', theme.colorBrandSecondary)
+		rootStyle.setProperty('--color-bg', theme.colorBg)
+		rootStyle.setProperty('--color-border', theme.colorBorder)
+		rootStyle.setProperty('--color-card', theme.colorCard)
+		rootStyle.setProperty('--color-article', theme.colorArticle)
+	}, [siteContent.theme])
 
 	const backgroundImages = (siteContent.backgroundImages ?? []) as Array<{ id: string; url: string }>
 	const currentBackgroundImageId = siteContent.currentBackgroundImageId

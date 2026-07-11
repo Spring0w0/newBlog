@@ -1,8 +1,8 @@
 package com.spring0w0.backend.auth.security;
 
-import com.spring0w0.backend.auth.service.JwtTokenService;
-import com.spring0w0.backend.user.entity.User;
-import com.spring0w0.backend.user.service.UserService;
+import com.spring0w0.backend.pojo.entity.User;
+import com.spring0w0.backend.service.JwtTokenService;
+import com.spring0w0.backend.service.UserService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Optional<User> user = userService.findEnabledByUsername(claims.username());
             user.ifPresent(value -> setAuthentication(value, request));
         } catch (JwtException | IllegalArgumentException exception) {
-            log.debug("JWT authentication failed: {}", exception.getMessage());
+            log.debug("JWT 鉴权失败，原因：令牌无效或已过期");
         }
     }
 

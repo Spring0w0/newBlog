@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
-import siteContent from '@/config/site-content.json'
 import { makeNoise2D, rand } from './utils'
 
 /**
@@ -12,7 +11,7 @@ import { makeNoise2D, rand } from './utils'
  */
 export default function BlurredBubblesBackground({
 	count = 6,
-	colors = siteContent.backgroundColors,
+	colors = ['#f7da3987', '#8fdbe9', '#fffef8'],
 	minRadius = 250,
 	maxRadius = 400,
 	bottomBandStart = 0.8,

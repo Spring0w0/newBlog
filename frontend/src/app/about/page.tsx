@@ -10,6 +10,7 @@ import { useConfigStore } from '@/app/(home)/stores/config-store'
 import LikeButton from '@/components/like-button'
 import GithubSVG from '@/svgs/github.svg'
 import initialData from './list.json'
+import { usePublicResource } from '@/hooks/use-public-resource'
 
 export default function Page() {
 	const [data, setData] = useState<AboutData>(initialData as AboutData)
@@ -20,6 +21,7 @@ export default function Page() {
 
 	const { isAuth, openLoginDialog } = useAuthStore()
 	const { siteContent } = useConfigStore()
+	const { data: publicAbout } = usePublicResource<AboutData>('/api/about')
 	const { content, loading } = useMarkdownRender(data.content)
 	const hideEditButton = siteContent.hideEditButton ?? false
 
@@ -61,6 +63,12 @@ export default function Page() {
 	}
 
 	const buttonText = isAuth ? '保存' : '登录'
+
+	useEffect(() => {
+		if (!publicAbout || isEditMode) return
+		setData(publicAbout)
+		setOriginalData(publicAbout)
+	}, [publicAbout, isEditMode])
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {

@@ -3,7 +3,7 @@ package com.spring0w0.backend.auth.config;
 import com.spring0w0.backend.auth.security.JwtAuthenticationFilter;
 import com.spring0w0.backend.auth.security.RestAccessDeniedHandler;
 import com.spring0w0.backend.auth.security.RestAuthenticationEntryPoint;
-import com.spring0w0.backend.user.service.UserService;
+import com.spring0w0.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -51,7 +51,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/actuator/health", "/swagger", "/swagger/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll()
                 )

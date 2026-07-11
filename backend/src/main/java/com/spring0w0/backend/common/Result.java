@@ -1,11 +1,18 @@
 package com.spring0w0.backend.common;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * API 的统一响应结构。
  *
  * @param <T> 响应数据类型
  */
-public record Result<T>(int code, String message, T data) {
+@Schema(description = "统一 API 响应结构")
+public record Result<T>(
+        @Schema(description = "业务状态码", example = "200") int code,
+        @Schema(description = "响应提示", example = "Success") String message,
+        @Schema(description = "响应数据；失败时为 null") T data
+) {
 
     public static <T> Result<T> success() {
         return success(null);

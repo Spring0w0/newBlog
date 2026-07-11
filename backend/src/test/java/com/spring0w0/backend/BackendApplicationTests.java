@@ -1,8 +1,17 @@
 package com.spring0w0.backend;
 
-import com.spring0w0.backend.auth.service.JwtTokenService;
-import com.spring0w0.backend.user.entity.User;
-import com.spring0w0.backend.user.mapper.UserMapper;
+import com.spring0w0.backend.mapper.UserMapper;
+import com.spring0w0.backend.pojo.entity.User;
+import com.spring0w0.backend.pojo.vo.BlogSummaryVo;
+import com.spring0w0.backend.service.AboutService;
+import com.spring0w0.backend.service.BlogService;
+import com.spring0w0.backend.service.BloggerService;
+import com.spring0w0.backend.service.JwtTokenService;
+import com.spring0w0.backend.service.PictureService;
+import com.spring0w0.backend.service.ProjectService;
+import com.spring0w0.backend.service.ShareService;
+import com.spring0w0.backend.service.SiteService;
+import com.spring0w0.backend.service.SnippetService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -50,6 +60,30 @@ class BackendApplicationTests {
 
     @MockitoBean
     private UserMapper userMapper;
+
+    @MockitoBean
+    private BlogService blogService;
+
+    @MockitoBean
+    private SiteService siteService;
+
+    @MockitoBean
+    private AboutService aboutService;
+
+    @MockitoBean
+    private BloggerService bloggerService;
+
+    @MockitoBean
+    private ProjectService projectService;
+
+    @MockitoBean
+    private ShareService shareService;
+
+    @MockitoBean
+    private PictureService pictureService;
+
+    @MockitoBean
+    private SnippetService snippetService;
 
     @BeforeEach
     void setUp() {
@@ -107,6 +141,21 @@ class BackendApplicationTests {
     }
 
     @Test
+    void publishedBlogsAreAvailableWithoutAuthentication() throws Exception {
+        when(blogService.getPublishedBlogs()).thenReturn(List.of(
+                new BlogSummaryVo(
+                        "public-post", "公开文章", List.of("测试"), "2026-07-11T12:00:00", "摘要", "/cover.png", false, "测试"
+                )
+        ));
+
+        mockMvc.perform(get("/api/blogs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0].slug").value("public-post"))
+                .andExpect(jsonPath("$.data[0].hidden").value(false));
+    }
+
+    @Test
     void expiredTokenReturnsJsonUnauthorized() throws Exception {
         String expiredToken = Jwts.builder()
                 .subject("admin")
@@ -128,6 +177,32 @@ class BackendApplicationTests {
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:2025"));
+    }
+
+    @Test
+    void openApiDocumentDescribesImplementedEndpointsAndJwtScheme() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.info.title").value("NewBlog API"))
+                .andExpect(jsonPath("$.components.securitySchemes.BearerAuth.type").value("http"))
+                .andExpect(jsonPath("$.components.securitySchemes.BearerAuth.scheme").value("bearer"))
+                .andExpect(jsonPath("$.paths['/api/auth/login'].post.summary").value("管理员账号密码登录"))
+                .andExpect(jsonPath("$.paths['/api/blogs/{slug}'].get.parameters[0].name").value("slug"));
+    }
+
+    @Test
+    void swaggerEntryUsesShortConfiguredPath() throws Exception {
+        mockMvc.perform(get("/swagger"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string(HttpHeaders.LOCATION, org.hamcrest.Matchers.containsString("/swagger-ui/index.html")));
+    }
+
+    @Test
+    void missingResourceReturnsUnifiedNotFoundResponse() throws Exception {
+        mockMvc.perform(get("/not-registered-resource"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.message").value("资源不存在"));
     }
 
     private User user(String username, String role) {

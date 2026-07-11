@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { useCenterInit, useCenterStore } from '@/hooks/use-center'
 import { Picture } from '../page'
-import siteContent from '@/config/site-content.json'
+import { useConfigStore } from '@/app/(home)/stores/config-store'
 import { cn } from '@/lib/utils'
 import { useSize } from '@/hooks/use-size'
 
@@ -134,6 +134,7 @@ const FloatingImage = ({
 }: FloatingImageProps) => {
 	const { centerX, centerY } = useCenterStore()
 	const { maxSM, init } = useSize()
+	const backgroundColors = useConfigStore(state => state.siteContent.backgroundColors)
 	const bodyRef = useRef(document.body)
 	const mouseDownTimeRef = useRef<number | null>(null)
 	const [zIndex, setZIndex] = useState(index)
@@ -326,7 +327,7 @@ const FloatingImage = ({
 					dragMomentum={false}
 					className='fixed min-h-[150px] w-[200px] cursor-pointer p-6 shadow'
 					style={{
-						backgroundColor: siteContent.backgroundColors[groupIndex % siteContent.backgroundColors.length],
+						backgroundColor: backgroundColors[groupIndex % backgroundColors.length],
 						zIndex: TOP_Z_INDEX + 1,
 						right: maxSM ? 12 : centerX / 3,
 						top: maxSM ? 12 : centerY

@@ -11,6 +11,7 @@ import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import type { ImageItem } from '../projects/components/image-upload-dialog'
 import { useRouter } from 'next/navigation'
+import { usePublicResource } from '@/hooks/use-public-resource'
 
 export interface Picture {
 	id: string
@@ -31,7 +32,14 @@ export default function Page() {
 
 	const { isAuth, openLoginDialog } = useAuthStore()
 	const { siteContent } = useConfigStore()
+	const { data: publicPictures } = usePublicResource<Picture[]>('/api/pictures')
 	const hideEditButton = siteContent.hideEditButton ?? false
+
+	useEffect(() => {
+		if (!publicPictures || isEditMode) return
+		setPictures(publicPictures)
+		setOriginalPictures(publicPictures)
+	}, [publicPictures, isEditMode])
 
 	const handleUploadSubmit = ({ images, description }: { images: ImageItem[]; description: string }) => {
 		const now = new Date().toISOString()

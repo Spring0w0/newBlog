@@ -9,6 +9,7 @@ import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import initialList from './list.json'
 import { pushSnippets } from './services/push-snippets'
+import { usePublicResource } from '@/hooks/use-public-resource'
 
 const getRandomSnippet = (list: string[]) => (list.length === 0 ? '' : list[Math.floor(Math.random() * list.length)])
 
@@ -24,7 +25,15 @@ export default function Page() {
 
 	const { isAuth, openLoginDialog } = useAuthStore()
 	const { siteContent } = useConfigStore()
+	const { data: publicSnippets } = usePublicResource<string[]>('/api/snippets')
 	const hideEditButton = siteContent.hideEditButton ?? false
+
+	useEffect(() => {
+		if (!publicSnippets || isEditMode) return
+		setSnippets(publicSnippets)
+		setOriginalSnippets(publicSnippets)
+		setCurrentSnippet(getRandomSnippet(publicSnippets))
+	}, [publicSnippets, isEditMode])
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {

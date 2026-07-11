@@ -1,10 +1,10 @@
-package com.spring0w0.backend.user.service;
+package com.spring0w0.backend.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.spring0w0.backend.common.ResultCode;
 import com.spring0w0.backend.exception.BusinessException;
-import com.spring0w0.backend.user.entity.User;
-import com.spring0w0.backend.user.mapper.UserMapper;
+import com.spring0w0.backend.mapper.UserMapper;
+import com.spring0w0.backend.pojo.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

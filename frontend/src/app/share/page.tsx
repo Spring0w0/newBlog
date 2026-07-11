@@ -11,6 +11,7 @@ import { useConfigStore } from '@/app/(home)/stores/config-store'
 import initialList from './list.json'
 import type { Share } from './components/share-card'
 import type { LogoItem } from './components/logo-upload-dialog'
+import { usePublicResource } from '@/hooks/use-public-resource'
 
 export default function Page() {
 	const [shares, setShares] = useState<Share[]>(initialList as Share[])
@@ -23,7 +24,14 @@ export default function Page() {
 
 	const { isAuth, openLoginDialog } = useAuthStore()
 	const { siteContent } = useConfigStore()
+	const { data: publicShares } = usePublicResource<Share[]>('/api/shares')
 	const hideEditButton = siteContent.hideEditButton ?? false
+
+	useEffect(() => {
+		if (!publicShares || isEditMode) return
+		setShares(publicShares)
+		setOriginalShares(publicShares)
+	}, [publicShares, isEditMode])
 
 	const handleUpdate = (updatedShare: Share, oldShare: Share, logoItem?: LogoItem) => {
 		setShares(prev => prev.map(s => (s.url === oldShare.url ? updatedShare : s)))

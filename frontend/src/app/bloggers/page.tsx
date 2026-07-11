@@ -10,6 +10,7 @@ import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import initialList from './list.json'
 import type { AvatarItem } from './components/avatar-upload-dialog'
+import { usePublicResource } from '@/hooks/use-public-resource'
 
 export default function Page() {
 	const [bloggers, setBloggers] = useState<Blogger[]>(initialList as Blogger[])
@@ -22,7 +23,14 @@ export default function Page() {
 
 	const { isAuth, openLoginDialog } = useAuthStore()
 	const { siteContent } = useConfigStore()
+	const { data: publicBloggers } = usePublicResource<Blogger[]>('/api/bloggers')
 	const hideEditButton = siteContent.hideEditButton ?? false
+
+	useEffect(() => {
+		if (!publicBloggers || isEditMode) return
+		setBloggers(publicBloggers)
+		setOriginalBloggers(publicBloggers)
+	}, [publicBloggers, isEditMode])
 
 	const handleUpdate = (updatedBlogger: Blogger, oldBlogger: Blogger, avatarItem?: AvatarItem) => {
 		setBloggers(prev => prev.map(b => (b.url === oldBlogger.url ? updatedBlogger : b)))

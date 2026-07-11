@@ -23,7 +23,7 @@ spring:
 
 logging:
   level:
-    com.spring0w0.backend: debug
+    com.spring0w0.backend: info
     org.springframework.security: info
 
 app:

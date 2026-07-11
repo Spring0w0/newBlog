@@ -1,4 +1,4 @@
-package com.spring0w0.backend.auth.service;
+package com.spring0w0.backend.service;
 
 import com.spring0w0.backend.auth.config.JwtProperties;
 import io.jsonwebtoken.Claims;
