@@ -3,7 +3,9 @@ package com.spring0w0.backend;
 import com.spring0w0.backend.mapper.UserMapper;
 import com.spring0w0.backend.pojo.entity.User;
 import com.spring0w0.backend.pojo.entity.FileAsset;
+import com.spring0w0.backend.pojo.vo.AdminBlogSummaryVo;
 import com.spring0w0.backend.pojo.vo.BlogSummaryVo;
+import com.spring0w0.backend.pojo.vo.PageVo;
 import com.spring0w0.backend.service.AboutService;
 import com.spring0w0.backend.service.BlogService;
 import com.spring0w0.backend.service.BloggerService;
@@ -37,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -167,6 +170,27 @@ class BackendApplicationTests {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data[0].slug").value("public-post"))
                 .andExpect(jsonPath("$.data[0].hidden").value(false));
+    }
+
+    @Test
+    void administratorCanReadPaginatedBlogManagementList() throws Exception {
+        when(blogService.getAdminBlogs(anyLong(), anyLong(), any())).thenReturn(new PageVo<>(
+                List.of(new AdminBlogSummaryVo(
+                        12L, "managed-post", "管理文章", List.of("测试"), "2026-07-11T12:00:00",
+                        "摘要", "/cover.png", false, "测试"
+                )),
+                1, 20, 1, 1
+        ));
+        String token = jwtTokenService.createAccessToken("admin", "ADMIN");
+
+        mockMvc.perform(get("/api/admin/blogs")
+                        .param("page", "1")
+                        .param("pageSize", "20")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.items[0].id").value(12))
+                .andExpect(jsonPath("$.data.items[0].slug").value("managed-post"));
     }
 
     @Test

@@ -39,4 +39,5 @@ app:
   upload:
     root-dir: ${UPLOAD_ROOT_DIR:/data/newblog/uploads}
     public-path: /images
+    public-base-url: ${PUBLIC_BASE_URL:http://www.spring0w04j.top}
     max-file-size: 10MB

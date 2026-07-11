@@ -27,6 +27,7 @@ app:
   upload:
     root-dir: ${UPLOAD_ROOT_DIR:uploads}
     public-path: /images
+    public-base-url: ${PUBLIC_BASE_URL:}
     max-file-size: 10MB
 
 mybatis-plus:

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { hashFileSHA256 } from '@/lib/file-utils'
-import { loadBlog } from '@/lib/load-blog'
+import { getAdminBlogBySlug } from '@/lib/admin-blog-api'
 import { deleteUploadedImage, uploadImage, validateImageForUpload } from '@/lib/file-api'
 import type { PublishForm, ImageItem } from '../types'
 
@@ -19,7 +19,8 @@ type WriteStore = {
 	// Mode state
 	mode: 'create' | 'edit'
 	originalSlug: string | null
-	setMode: (mode: 'create' | 'edit', originalSlug?: string) => void
+	originalId: number | null
+	setMode: (mode: 'create' | 'edit', originalSlug?: string, originalId?: number) => void
 
 	// Form state
 	form: PublishForm
@@ -63,7 +64,8 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 	// Mode state
 	mode: 'create',
 	originalSlug: null,
-	setMode: (mode, originalSlug) => set({ mode, originalSlug: originalSlug || null }),
+	originalId: null,
+	setMode: (mode, originalSlug, originalId) => set({ mode, originalSlug: originalSlug || null, originalId: originalId || null }),
 
 	// Form state
 	form: { ...initialForm },
@@ -231,17 +233,21 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 	loadBlogForEdit: async (slug: string) => {
 		try {
 			set({ loading: true })
-			const blog = await loadBlog(slug)
+			const blog = await getAdminBlogBySlug(slug)
 
-			// Parse images from markdown
+			// 数据库记录保存了正文图片引用；额外从 Markdown 补齐历史文章尚未建立的外部图片。
 			const images: ImageItem[] = []
+			for (const url of blog.imageUrls) {
+				if (url && url !== blog.cover && !images.some(image => image.type === 'url' && image.url === url)) {
+					images.push({ id: Math.random().toString(36).slice(2, 10), type: 'url', url })
+				}
+			}
 			const imageRegex = /!\[.*?\]\((.*?)\)/g
 			let match
 			while ((match = imageRegex.exec(blog.markdown)) !== null) {
 				const url = match[1]
-				// Skip cover image and only collect content images
+				// 跳过封面，只收集正文图片。
 				if (url && url !== blog.cover && !url.startsWith('local-image:')) {
-					// Check if already added
 					if (!images.some(img => img.type === 'url' && img.url === url)) {
 						const id = Math.random().toString(36).slice(2, 10)
 						images.push({ id, type: 'url', url })
@@ -260,15 +266,16 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 			set({
 				mode: 'edit',
 				originalSlug: slug,
+				originalId: blog.id,
 				form: {
 					slug,
-					title: blog.config.title || '',
+					title: blog.title || '',
 					md: blog.markdown,
-					tags: blog.config.tags || [],
-					date: blog.config.date ? formatDateTimeLocal(new Date(blog.config.date)) : formatDateTimeLocal(),
-					summary: blog.config.summary || '',
-					hidden: blog.config.hidden || false,
-					category: blog.config.category || ''
+					tags: blog.tags || [],
+					date: blog.publishedAt ? formatDateTimeLocal(new Date(blog.publishedAt)) : formatDateTimeLocal(),
+					summary: blog.summary || '',
+					hidden: blog.hidden,
+					category: blog.category || ''
 				},
 				images,
 				cover,
@@ -300,6 +307,7 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 		set({
 			mode: 'create',
 			originalSlug: null,
+			originalId: null,
 			form: { ...initialForm, date: formatDateTimeLocal() },
 			images: [],
 			cover: null

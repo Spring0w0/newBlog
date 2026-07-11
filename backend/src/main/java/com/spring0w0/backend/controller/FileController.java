@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
  * 管理端运行期图片上传和删除接口。
@@ -94,10 +93,6 @@ public class FileController {
     }
 
     private String buildPublicUrl(FileAsset asset) {
-        return ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(uploadProperties.normalizedPublicPath())
-                .path("/")
-                .path(asset.getRelativePath())
-                .toUriString();
+        return uploadProperties.buildPublicUrl(uploadProperties.normalizedPublicPath() + "/" + asset.getRelativePath());
     }
 }

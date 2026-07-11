@@ -11,7 +11,7 @@
 | 1 | 账号密码登录、JWT、401/403 | 已实现 |
 | 2 | 公开内容读取 | 已实现 |
 | 3 | 图片/文件上传与静态资源映射 | 已实现 |
-| 4 | 博客后台 CRUD、分类管理 | 已设计 |
+| 4 | 博客后台 CRUD、分类管理 | 已实现 |
 | 5 | about、博主、项目、友链、相册、片段后台 CRUD | 已设计 |
 | 6 | 站点配置、卡片样式后台保存 | 已设计 |
 | 7 | RSS、sitemap、SEO 数据消费 | 已设计 |
@@ -36,7 +36,7 @@
 - 本地前端：`http://localhost:2025`。
 - 前端通过 `NEXT_PUBLIC_API_BASE_URL` 配置后端基础地址；浏览器端不可依赖 Next.js `/api` 代理。
 - JSON 字段使用 `lowerCamelCase`；时间使用 ISO-8601 字符串。
-- URL 字段一律使用可直接访问的公开 URL。阶段 3 开始，后端上传接口返回**绝对 URL**，例如 `http://localhost:8080/images/projects/a1b2.webp`，避免跨端口开发环境解析错误。
+- API 中的 URL 字段一律使用可直接访问的公开绝对 URL。后端上传接口和公开读取接口依据 `app.upload.public-base-url` 生成该 URL，例如开发环境的 `http://localhost:8080/images/projects/a1b2.webp`，避免跨端口开发环境解析错误。后端数据库对受管文件仅保存 `/images/...` 相对公开路径，不持久化环境域名或 `localhost`。
 
 ### 2.2 统一响应
 
@@ -328,24 +328,56 @@ newBlog/
 - 仅支持 JPEG（`.jpg`/`.jpeg`）、PNG（`.png`）、GIF（`.gif`）和 WebP（`.webp`）。SVG 因脚本风险不接受；不支持的或 MIME/扩展名/实际文件签名不一致时返回 `415`。
 - 服务端生成文件名，不使用客户端文件名作为磁盘路径；原始文件名只作为受限长度的元数据保存。
 - 服务端同时校验声明 MIME、文件扩展名和文件签名，拒绝路径穿越、空文件和伪装图片。
-- 成功响应新增 `fileId`，前端保存业务数据时使用响应中的绝对 `url`；删除始终使用 `fileId`。
+- 成功响应新增 `fileId`，前端可直接使用响应中的绝对 `url` 进行预览和提交；后端保存业务数据时会将受管 URL 规范化为 `/images/...` 路径。删除始终使用 `fileId`。
 - 编辑阶段主动从图片列表删除未引用文件时，前端使用 `fileId` 调用删除接口；因断网或业务保存失败产生的历史孤儿文件，后续阶段再补充定时清理策略。
 
 ### 5.3 `DELETE /api/admin/files/{fileId}` — 已实现
 
 只允许管理员删除未被业务数据引用的文件；仍被文章、项目、友链、站点配置或相册引用时返回 `422`。引用检查同时覆盖文章封面/正文图片、站点配置、博主、项目、友链、相册、艺术图和背景图。文件不存在返回 `404`；删除成功的 `data` 为 `null`。具体 `fileId` 持久化方案随阶段 3 文件元数据表一并落地，不以 URL 直接删除文件。
 
-## 6. 博客与分类管理接口（阶段 4）
+## 6. 博客与分类管理接口（已实现）
 
 所有接口均要求 `ADMIN`。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| GET | `/api/admin/blogs` | 分页查询文章管理列表，返回数据库 `id`；支持可选 `slug` 精确筛选 |
+| GET | `/api/admin/blogs/{id}` | 按数据库 ID 查询文章编辑详情 |
 | POST | `/api/admin/blogs` | 新建文章 |
 | PUT | `/api/admin/blogs/{id}` | 按数据库 ID 更新文章 |
 | DELETE | `/api/admin/blogs/{id}` | 删除文章及关联 `blog_images` 关系 |
-| POST | `/api/admin/blogs/batch-delete` | 批量删除，body 为 `{ "ids": [1, 2] }` |
-| PUT | `/api/admin/categories` | 整体保存分类顺序，body 为 `{ "categories": ["总结", "开源"] }` |
+| DELETE | `/api/admin/blogs/batch` | 批量删除，body 为 `{ "ids": [1, 2] }` |
+| PUT | `/api/admin/categories` | 整体保存分类及排序，body 为 `{ "categories": ["总结", "开源"] }` |
+
+管理端文章列表使用统一分页结构：
+
+```json
+{
+  "items": [{ "id": 42, "slug": "auto-tool", "title": "自动工具" }],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1,
+  "totalPages": 1
+}
+```
+
+`GET /api/admin/blogs` 的 `page` 默认 `1`、`pageSize` 默认 `20`，上限 `100`。管理端详情和创建/更新成功时返回以下结构：
+
+```json
+{
+  "id": 42,
+  "slug": "auto-tool",
+  "title": "自动工具",
+  "markdown": "# 自动工具",
+  "tags": ["React"],
+  "summary": "摘要",
+  "category": "总结",
+  "cover": "http://localhost:8080/images/blog-images/cover.webp",
+  "hidden": false,
+  "publishedAt": "2026-07-11T12:00:00",
+  "imageUrls": ["http://localhost:8080/images/blog-images/content.webp"]
+}
+```
 
 文章写入 DTO：
 
@@ -359,14 +391,16 @@ newBlog/
   "category": "总结",
   "cover": "http://localhost:8080/images/blog-images/cover.webp",
   "hidden": false,
-  "publishedAt": "2026-07-11T12:00:00",
-  "imageUrls": ["http://localhost:8080/images/blog-images/content.webp"]
+  "publishedAt": "2026-07-11T12:00:00"
 }
 ```
 
-- `slug` 全局唯一，重复返回 `409`。
-- `imageUrls` 用于维护 `blog_images` 关联，不从 Markdown 正则推断为唯一事实来源。
-- 更新后公开列表、详情、RSS、sitemap 的缓存必须失效。
+- `title`、`slug`、`markdown` 必填；`slug` 仅允许小写字母、数字和连字符，长度 `3`–`120`，全局唯一，重复返回 `409`。
+- 非空 `category` 必须存在于分类列表中；不存在返回 `422`。
+- 正文图片引用以 `markdown` 中的 Markdown 图片语法为事实来源。服务端按图片首次出现顺序写入 `blog_images`；后端上传的 `blog-images` URL 会同步解析为 `file_assets` 引用。外部 URL 和历史静态 URL 保持兼容，但不会伪造文件引用。
+- 删除单篇或批量删除文章会在同一事务中删除 `blog_images` 关联；随后可删除不再被任何业务数据引用的上传文件。
+- 保存分类时，不允许直接删除仍被文章使用的分类，返回 `422`；调用方应先更新文章分类再保存分类顺序。
+- 文章/分类写入成功后会失效后端的公开文章列表、文章详情和分类 Caffeine 缓存；前端管理页同时重新验证 `/api/blogs` 与 `/api/categories`。RSS、sitemap 目前直接消费公开 API，没有额外的应用内缓存副本。
 
 ## 7. 其他内容管理接口（阶段 5）
 
@@ -421,7 +455,31 @@ cd D:\develop\newBlog\backend
 
 导入器仅用于迁移；后续管理端写入必须使用 `/api/admin/**`，不能继续修改 GitHub 或本地 JSON。
 
-### 10.2 缓存失效
+### 10.2 历史文章图片迁移
+
+历史文章目录中的 `/blogs/{slug}/{file}` 图片通过显式迁移进入 `uploads/blog-images`，并在 `file_assets`、`blog_posts.cover_file_asset_id` 与 `blog_images` 中建立引用。迁移会将数据库中的历史 `/blogs/...` 和受管图片绝对 URL 规范化为 `/images/...`；公开 API 仍依据 `app.upload.public-base-url` 返回绝对 URL。
+
+迁移不会自动执行。仅在确认源目录、数据库备份和上传目录可写后显式运行：
+
+```powershell
+cd D:\develop\newBlog\backend
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--app.legacy-blog-image-migration.enabled=true --app.legacy-blog-image-migration.source-root=D:/develop/newBlog/frontend"
+```
+
+当前运行期上传只允许 JPEG、PNG、GIF 和 WebP；历史目录中的 SVG 会被迁移器跳过并保留原静态路径，不能通过此迁移绕过上传安全策略。
+
+### 10.3 上传公开地址配置
+
+`app.upload.public-base-url` 是必须配置的环境项，专门用于生成供浏览器访问的文件绝对 URL：
+
+| 环境 | 配置 |
+|---|---|
+| 开发 | `http://localhost:8080` |
+| 生产 | 环境变量 `PUBLIC_BASE_URL`，例如 `https://api.example.com` 或统一网关域名 |
+
+生产环境缺少 `PUBLIC_BASE_URL` 会在启动时因配置校验失败，避免把内网地址或 `localhost` 写入 API 响应。反向代理无需依赖转发请求头来拼接文件地址。
+
+### 10.4 缓存失效
 
 | 修改资源 | 需要失效的读取数据 |
 |---|---|
@@ -430,7 +488,7 @@ cd D:\develop\newBlog\backend
 | 其他内容资源 | 对应公开列表 |
 | 文件 | 文件元数据与引用资源缓存 |
 
-### 10.3 契约变更
+### 10.5 契约变更
 
 - 已公开字段不得删除或改名；新增字段必须可选并保持前端兼容。
 - 改变数组/对象结构、身份认证方式、文件 URL 规则属于破坏性变更，必须先更新本文档和前端适配层。

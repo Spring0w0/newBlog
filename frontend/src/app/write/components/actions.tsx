@@ -16,9 +16,9 @@ export function WriteActions() {
 
 	const handleImportOrPublish = () => {
 		if (!isAuth) {
-			openLoginDialog(onPublish)
+			openLoginDialog()
 		} else {
-			onPublish()
+			void onPublish()
 		}
 	}
 
@@ -35,14 +35,17 @@ export function WriteActions() {
 
 	const buttonText = isAuth ? (mode === 'edit' ? '更新' : '发布') : '登录'
 
-	const handleDelete = () => {
+	const handleDelete = async () => {
 		if (!isAuth) {
 			openLoginDialog()
 			return
 		}
 		const confirmMsg = form?.title ? `确定删除《${form.title}》吗？该操作不可恢复。` : '确定删除当前文章吗？该操作不可恢复。'
 		if (window.confirm(confirmMsg)) {
-			onDelete()
+			const deleted = await onDelete()
+			if (deleted) {
+				router.replace('/blog')
+			}
 		}
 	}
 
@@ -83,7 +86,7 @@ export function WriteActions() {
 							whileTap={{ scale: 0.95 }}
 							className='rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-100'
 							disabled={loading}
-							onClick={handleDelete}>
+							onClick={() => void handleDelete()}>
 							删除
 						</motion.button>
 

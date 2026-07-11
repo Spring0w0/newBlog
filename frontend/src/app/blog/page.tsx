@@ -4,6 +4,7 @@ import Link from 'next/link'
 import dayjs from 'dayjs'
 import weekOfYear from 'dayjs/plugin/weekOfYear'
 import { motion } from 'motion/react'
+import { mutate } from 'swr'
 
 dayjs.extend(weekOfYear)
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -264,6 +265,9 @@ export default function BlogPage() {
 		try {
 			setSaving(true)
 			await saveBlogEdits(items, editableItems, normalizedCategoryList)
+			void mutate('/api/blogs')
+			void mutate('/api/categories')
+			toast.success('保存成功')
 			setEditMode(false)
 			setSelectedSlugs(new Set())
 			setCategoryModalOpen(false)

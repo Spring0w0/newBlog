@@ -22,6 +22,7 @@ public class BlogPost {
     private String tags;
     private String category;
     private String coverUrl;
+    private Long coverFileAssetId;
     private Boolean hidden;
     private Long viewCount;
     private LocalDateTime publishedAt;

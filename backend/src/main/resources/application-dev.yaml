@@ -35,4 +35,5 @@ app:
   upload:
     root-dir: D:/develop/newBlog/uploads
     public-path: /images
+    public-base-url: http://localhost:8080
     max-file-size: 10MB
