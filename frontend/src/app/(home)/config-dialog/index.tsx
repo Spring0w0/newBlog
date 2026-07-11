@@ -22,7 +22,7 @@ type TabType = 'site' | 'color' | 'layout'
 
 export default function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 	const { isAuth, openLoginDialog } = useAuthStore()
-	const { siteContent, setSiteContent, cardStyles, setCardStyles, regenerateBubbles } = useConfigStore()
+	const { siteContent, setSiteContent, cardStyles, setCardStyles, refreshPublicConfig, regenerateBubbles } = useConfigStore()
 	const [formData, setFormData] = useState<SiteContent>(siteContent)
 	const [cardStylesData, setCardStylesData] = useState<CardStyles>(cardStyles)
 	const [originalData, setOriginalData] = useState<SiteContent>(siteContent)
@@ -81,44 +81,26 @@ export default function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
-			handleSave()
+			void handleSave()
 		}
 	}
 
 	const handleSave = async () => {
 		setIsSaving(true)
 		try {
-			// Calculate removed art images so that we can delete files in repo
-			const originalArtImages = originalData.artImages ?? []
-			const currentArtImages = formData.artImages ?? []
-			const removedArtImages = originalArtImages.filter(orig => !currentArtImages.some(current => current.id === orig.id))
-
-			// Calculate removed background images
-			const originalBackgroundImages = originalData.backgroundImages ?? []
-			const currentBackgroundImages = formData.backgroundImages ?? []
-			const removedBackgroundImages = originalBackgroundImages.filter(orig => !currentBackgroundImages.some(current => current.id === orig.id))
-
-			await pushSiteContent(
-				formData,
-				cardStylesData,
-				faviconItem,
-				avatarItem,
-				artImageUploads,
-				removedArtImages,
-				backgroundImageUploads,
-				removedBackgroundImages,
-				socialButtonImageUploads
-			)
-			setSiteContent(formData)
-			setCardStyles(cardStylesData)
-			updateThemeVariables(formData.theme)
+			const saved = await pushSiteContent(formData, cardStylesData)
+			setSiteContent(saved.config)
+			setCardStyles(saved.cardStyles)
+			await refreshPublicConfig()
+			updateThemeVariables(saved.config.theme)
 			setFaviconItem(null)
 			setAvatarItem(null)
 			setArtImageUploads({})
 			setBackgroundImageUploads({})
 			setSocialButtonImageUploads({})
+			toast.success('保存成功')
 			onClose()
 		} catch (error: any) {
 			console.error('Failed to save:', error)

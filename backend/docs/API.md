@@ -13,7 +13,7 @@
 | 3 | 图片/文件上传与静态资源映射 | 已实现 |
 | 4 | 博客后台 CRUD、分类管理 | 已实现 |
 | 5 | about、博主、项目、友链、相册、片段后台 CRUD | 已实现 |
-| 6 | 站点配置、卡片样式后台保存 | 已设计 |
+| 6 | 站点配置、卡片样式后台保存 | 已实现 |
 | 7 | RSS、sitemap、SEO 数据消费 | 已设计 |
 | 8 | 移除 GitHub CMS 旧链路 | 已设计 |
 
@@ -450,18 +450,29 @@ newBlog/
 
 Flyway `V7__link_content_images_to_file_assets.sql` 为博主、项目、友链增加受管图片的 `file_assets` 外键，并创建 `picture_images` 关系表。迁移会回填能匹配到受管图片的历史 URL；旧静态路径或外部 URL 继续保留 URL 本身，但不会伪造文件引用。
 
-## 8. 首页配置管理接口（阶段 6）
+## 8. 首页配置管理接口（已实现）
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | PUT | `/api/admin/site/config` | 保存完整站点配置，结构与 `GET /api/site/config` 相同 |
 | PUT | `/api/admin/site/card-styles` | 保存完整卡片样式对象，结构与 `GET /api/site/card-styles` 相同 |
+| PUT | `/api/admin/site/settings` | 原子保存站点配置与卡片样式，配置弹窗默认使用此接口 |
 
-配置保存后必须：
+三个接口均要求 `ADMIN` 与 Bearer Token。`/config` 和 `/card-styles` 直接接收与各自公开读取接口相同的 JSON 对象；`/settings` 请求体为：
 
-1. 校验颜色、URL、图片引用、卡片 key 和数值范围。
-2. 原子更新站点配置及关联图片/社交按钮/卡片样式。
-3. 失效公开站点配置缓存与 SEO 元数据缓存。
+```json
+{
+  "config": { "meta": { "title": "我的站点", "description": "..." } },
+  "cardStyles": { "hiCard": { "width": 360, "height": 288, "order": 1, "enabled": true } }
+}
+```
+
+成功时 `/settings` 返回同结构。配置保存后必须：
+
+1. 校验 `meta`、主题颜色、背景颜色、帽子索引、URL、图片引用、卡片 key 和数值范围；不支持的字段不应被静默丢弃。
+2. 对 `faviconUrl`、`avatarUrl`、Art 图片、背景图片和社交二维码等受管 `/images/site/**` URL，校验 `file_assets` 元数据存在且 scope 为 `site`，数据库只保存规范的相对 URL；外部 URL 与历史静态 URL 保持兼容。
+3. 在一个事务内更新站点 JSON、Art 图片、背景图片、社交按钮和卡片样式；图片/社交子表只作为站点配置中相应集合的关系镜像，避免旧引用阻止文件清理。
+4. 失效公开站点配置与卡片样式缓存；响应和后续公开接口均返回环境对应的绝对受管图片 URL。
 
 ## 9. RSS、sitemap 与 SEO（阶段 7）
 

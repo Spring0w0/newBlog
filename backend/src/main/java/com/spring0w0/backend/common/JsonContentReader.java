@@ -62,4 +62,12 @@ public class JsonContentReader {
             throw new IllegalStateException("无法序列化字符串列表", exception);
         }
     }
+
+    public String write(JsonNode value) {
+        try {
+            return objectMapper.writeValueAsString(value == null ? JsonNodeFactory.instance.objectNode() : value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("无法序列化 JSON 内容", exception);
+        }
+    }
 }

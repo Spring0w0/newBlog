@@ -6,6 +6,7 @@ import com.spring0w0.backend.pojo.entity.User;
 import com.spring0w0.backend.pojo.entity.FileAsset;
 import com.spring0w0.backend.pojo.vo.AdminBlogSummaryVo;
 import com.spring0w0.backend.pojo.vo.AdminBloggerVo;
+import com.spring0w0.backend.pojo.vo.SiteSettingsVo;
 import com.spring0w0.backend.pojo.vo.BlogSummaryVo;
 import com.spring0w0.backend.pojo.vo.PageVo;
 import com.spring0w0.backend.service.AboutService;
@@ -31,6 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.mock.web.MockMultipartFile;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
@@ -47,6 +49,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -210,6 +213,28 @@ class BackendApplicationTests {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data[0].id").value(7))
                 .andExpect(jsonPath("$.data[0].name").value("测试博主"));
+    }
+
+    @Test
+    void administratorCanSaveSiteSettingsAtomically() throws Exception {
+        var config = JsonNodeFactory.instance.objectNode();
+        config.putObject("meta").put("title", "测试站点").put("description", "测试描述");
+        var cardStyles = JsonNodeFactory.instance.objectNode();
+        cardStyles.putObject("hiCard").put("width", 360).put("height", 288).put("order", 1).put("enabled", true);
+        when(siteService.saveSiteSettings(any())).thenReturn(new SiteSettingsVo(config, cardStyles));
+        String token = jwtTokenService.createAccessToken("admin", "ADMIN");
+
+        mockMvc.perform(put("/api/admin/site/settings")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"config":{"meta":{"title":"测试站点","description":"测试描述"}},
+                                 "cardStyles":{"hiCard":{"width":360,"height":288,"order":1,"enabled":true}}}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.config.meta.title").value("测试站点"))
+                .andExpect(jsonPath("$.data.cardStyles.hiCard.width").value(360));
     }
 
     @Test

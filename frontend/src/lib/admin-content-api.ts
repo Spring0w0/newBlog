@@ -84,3 +84,12 @@ export const getAdminPictures = () => get<AdminPicture[]>('/api/admin/pictures')
 export const createAdminPicture = (payload: PicturePayload) => post<AdminPicture>('/api/admin/pictures', payload)
 export const updateAdminPicture = (id: string, payload: PicturePayload) => put<AdminPicture>(`/api/admin/pictures/${id}`, payload)
 export const deleteAdminPicture = (id: string) => del<void>(`/api/admin/pictures/${id}`)
+
+export type SiteSettings<TConfig, TCardStyles> = {
+	config: TConfig
+	cardStyles: TCardStyles
+}
+
+export function saveAdminSiteSettings<TConfig, TCardStyles>(config: TConfig, cardStyles: TCardStyles): Promise<SiteSettings<TConfig, TCardStyles>> {
+	return put<SiteSettings<TConfig, TCardStyles>>('/api/admin/site/settings', { config, cardStyles })
+}
