@@ -27,6 +27,11 @@ logging:
     org.springframework.security: info
 
 app:
+  security:
+    jwt:
+      secret: newblog-development-jwt-secret-change-me-before-production
+  cors:
+    allowed-origins: http://localhost:3000
   upload:
     root-dir: D:/develop/newBlog/uploads/blog-images
     public-path: /images

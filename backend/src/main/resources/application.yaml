@@ -17,6 +17,14 @@ management:
       probes:
         enabled: true
 
+app:
+  security:
+    jwt:
+      access-token-expiration: PT2H
+      issuer: newblog
+  cors:
+    allowed-origins: http://localhost:3000
+
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
