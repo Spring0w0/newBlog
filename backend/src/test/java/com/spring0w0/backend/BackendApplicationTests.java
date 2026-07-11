@@ -122,12 +122,12 @@ class BackendApplicationTests {
     }
 
     @Test
-    void corsPreflightAllowsFrontendDevelopmentOrigin() throws Exception {
+    void corsPreflightAllowsConfiguredFrontendDevelopmentOrigin() throws Exception {
         mockMvc.perform(options("/api/auth/login")
-                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:2025")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:3000"));
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:2025"));
     }
 
     private User user(String username, String role) {
