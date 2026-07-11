@@ -9,15 +9,14 @@ import CreateDialog from './components/create-dialog'
 import { pushProjects } from './services/push-projects'
 import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
-import initialList from './list.json'
 import type { ImageItem } from './components/image-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
 import { deleteUploadedImage } from '@/lib/file-api'
 import { getAdminProjects } from '@/lib/admin-content-api'
 
 export default function Page() {
-	const [projects, setProjects] = useState<Project[]>(initialList as Project[])
-	const [originalProjects, setOriginalProjects] = useState<Project[]>(initialList as Project[])
+	const [projects, setProjects] = useState<Project[]>([])
+	const [originalProjects, setOriginalProjects] = useState<Project[]>([])
 	const [isEditMode, setIsEditMode] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [editingProject, setEditingProject] = useState<Project | null>(null)

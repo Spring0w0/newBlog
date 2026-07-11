@@ -1,164 +1,67 @@
-# 2025 Blog
+# NewBlog
 
-> 最新引导说明：https://www.yysuni.com/blog/readme
+NewBlog 是一个由 Next.js 前端、Spring Boot 后端、MySQL 和本地上传目录组成的个人博客。文章、站点配置、其他公开内容和图片元数据均以后端数据库为唯一事实来源；前端不再通过 GitHub App 或 GitHub API 读写内容。
 
-该项目使用 Github App 管理项目内容，请保管好后续创建的 **Private key**，不要上传到公开网上。
+## 本地运行
 
-## 1. 安装
+先准备 Java 21、Node.js（建议 20+）、pnpm 和 MySQL 8。创建空数据库 `newblog` 后，在项目根目录分别启动两个应用：
 
-使用该项目可以先不做本地开发，直接部署然后配置环境变量。具体变量名请看下列大写变量
+```bash
+cd backend
+./mvnw spring-boot:run
 
-```ts
-export const GITHUB_CONFIG = {
-	OWNER: process.env.NEXT_PUBLIC_GITHUB_OWNER || 'yysuni',
-	REPO: process.env.NEXT_PUBLIC_GITHUB_REPO || '2025-blog-public',
-	BRANCH: process.env.NEXT_PUBLIC_GITHUB_BRANCH || 'main',
-	APP_ID: process.env.NEXT_PUBLIC_GITHUB_APP_ID || '-'
-} as const
+cd ../frontend
+pnpm install
+pnpm dev
 ```
 
-也可以自己手动先调整安装，可自行 `pnpm i`
+默认地址为：前端 `http://localhost:2025`，后端 `http://localhost:8080`。后端开发配置会运行 Flyway 迁移，并将上传文件写入项目根目录的 `uploads/`。
 
-## 2. 部署
+开发环境初始管理员账号为 `admin`，密码为 `admin`。首次部署后请尽快在数据库中替换为安全密码。
 
-我这里熟悉 Vercel 部署，就以 Vercel 部署为例子。创建 Project => Import 这个项目
+## 前端环境变量
 
-![](https://www.yysuni.com/blogs/readme/730266f17fab9717.png)
+复制 [`.env.example`](.env.example) 为 `.env.local` 后按环境填写：
 
-无需配置，直接点部署
+| 变量 | 用途 |
+|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | 浏览器访问后端的公开地址。|
+| `INTERNAL_API_BASE_URL` | Next.js 服务端生成 RSS、sitemap 和 metadata 时访问后端的地址；生产环境可用内网地址。|
+| `SITE_URL` | 用户实际访问博客的公开根地址，用于 canonical URL、RSS 与 sitemap。|
 
-![](https://www.yysuni.com/blogs/readme/95dee9a69154d0d0.png)
+不要在前端环境变量中保存数据库密码、JWT 密钥或任何私钥。
 
-大约 60 秒会部署完成，有一个直接 vercel 域名，如：https://2025-blog-public.vercel.app/
+## 生产部署
 
-到这里部署网站已经完成了，下一步创建 Github App
+后端使用 `prod` 配置启动。必须提供以下环境变量：
 
-## 3. 创建 Github App 链接仓库
-
-在 github 个人设置里面，找到最下面的 Developer Settings ，点击进入
-
-![](https://www.yysuni.com/blogs/readme/0abb3b592cbedad6.png)
-
-进入开发者页面，点击 **New Github App**
-
-*GitHub App name* 和 *Homepage URL* , 输入什么都不影响。Webhook 也关闭，不需要。
-
-![](https://www.yysuni.com/blogs/readme/71dcd9cf8ec967c0.png)
-
-只需要注意设置一个仓库 write 权限，其它不用。
-
-![](https://www.yysuni.com/blogs/readme/2be290016e56cd34.png)
-
-点击创建，谁能安装这个仓库这个选择无所谓。直接创建。
-
-![](https://www.yysuni.com/blogs/readme/aa002e6805ab2d65.png)
-
-
-### 创建密钥
-
-创建好 Github App 后会提示必须创建一个 **Private Key**，直接创建，会自动下载（不见了也不要紧，后面自己再创建再下载就行）。页面上有个 **App ID** 需要复制一下
-
-再切换到安装页面
-
-![](https://www.yysuni.com/blogs/readme/c122b1585bb7a46a.png)
-
-这里一定要只**授权当前项目**。
-
-![](https://www.yysuni.com/blogs/readme/2cf1cee3b04326f1.png)
-
-点击安装，就完成了 Github App 管理该仓库的权限设置了。下一步就是让前端知道推送那个项目，就是最开始提到的环境变量。（如果你不会设置环境变量，直接改仓库文件 `src/consts.ts` 也行。因为是公开的，所以环境变量意义也不大）
-
-直接输入这几个环境变量值就行，一般只用设置 OWNER 和 APP_ID。其它配置不用管，直接输入创建就行。
-
-![](https://www.yysuni.com/blogs/readme/c5a049d737848abf.png)
-
-设置完成后，需要手动再部署一次，让环境变量生效。
-* 可以直接 push 一次仓库代码会触发部署
-* 也可以手动选择创建一次部署
-![](https://www.yysuni.com/blogs/readme/59a802ed8d1c3a13.png)
-
-## 4. 完成
-
-现在，部署的这个网站就可以开始使用前端改内容了。比如更改一个分享内容。
-
-**提示**，网站前端页面删改完提示成功之后，你需要等待后台的部署完成，再刷新页面才能完成服务器内容的更新哦。
-
-## 5. 删除
-
-使用这个项目应该第一件事需要删除我的 blog，单独删除，批量删除已完成。
-
-## 6. 配置
-
-大部分页面右上角都会有一个编辑按钮，意味着你可以使用 **private key** 进行配置部署。
-
-### 6.1 网站配置
-
-首页有一个不显眼的配置按钮，点击就能看到现在可以配置的内容。
-
-![](https://www.yysuni.com/blogs/readme/cddb4710e08a5069.png)
-
-## 7. 写 blog
-
-写 blog 的图片管理，可能会有疑惑。图片管理推荐逻辑是先点击 **+ 号** 添加图片，（推荐先压缩好，尺寸推荐宽度不超过 1200）。然后将上传好的图片直接拖入文案编辑区，这就已经添加好了，点击右上角预览就可以看到效果。
-
-## 8. 写给非前端
-
-非前端配置内容，还是需要一个文件指引。下面写一些更细致的代码配置。
-
-### 8.1 移除 Liquid Grass
-
-进入 `src/layout/index.tsx` 文件，删除两行代码，然后提交代码到你的 github
-```tsx
-const LiquidGrass = dynamic(() => import('@/components/liquid-grass'), { ssr: false })
-// 中间省略...
-<LiquidGrass /> // 第 53 行
+```text
+DB_URL=jdbc:mysql://127.0.0.1:3306/newblog?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+DB_USERNAME=...
+DB_PASSWORD=...
+JWT_SECRET=至少使用高强度随机密钥
+CORS_ALLOWED_ORIGINS=http://www.spring0w04j.top
+UPLOAD_ROOT_DIR=/data/newblog/uploads
+PUBLIC_BASE_URL=http://www.spring0w04j.top
 ```
 
-![](https://www.yysuni.com/blogs/readme/f70ff3fe3a77f193.png)
+`SERVER_PORT`、`DB_POOL_MAX` 和 `DB_POOL_MIN_IDLE` 可按部署环境选填。生产环境默认关闭 Swagger；健康检查仍可访问 `/actuator/health`。启动命令示例：
 
-### 8.2 配置首页内容
+```bash
+java -jar backend.jar --spring.profiles.active=prod
+```
 
-首页的内容现在只能前端配置一部分，所以代码更改在 `src/app/(home)` 目录，这个目录代表首页所有文件。首页的具体文件为  `src/app/(home)/page.tsx`
+建议用 Nginx 或同类反向代理把前端作为默认站点，并将 `/api/`、`/images/` 和 `/actuator/health` 转发到后端。这样浏览器和后端使用同一个公开域名，`NEXT_PUBLIC_API_BASE_URL` 可以设置为该站点根地址；`INTERNAL_API_BASE_URL` 仍可指向后端内网地址。上线 HTTPS 时，应同步将 `SITE_URL`、`PUBLIC_BASE_URL` 和 `CORS_ALLOWED_ORIGINS` 改为 HTTPS 域名。
 
- ![](https://www.yysuni.com/blogs/readme/011679cd9bf73602.png)
+## 数据与备份
 
-这里可以看到有很多 `Card` 文件，需要改那个首页 Card 内容就可以点入那个具体文件修改。
+运行期上传文件位于项目根目录的 `uploads/`，与 `backend/`、`frontend/` 平级，且不会进入 Git。恢复完整网站需要同时恢复：
 
-比如中间的内容，为 `HiCard`，点击 `hi-card.tsx` 文件，即可更改其内容。
+1. MySQL 数据库备份（含 Flyway 历史、内容、用户和文件元数据）；
+2. 与该备份时间点匹配的整个 `uploads/` 目录。
 
-![](https://www.yysuni.com/blogs/readme/20b0791d012163ee.png)
+只恢复数据库而不恢复上传目录会产生失效图片；只恢复上传目录而不恢复数据库会留下不可引用的文件。不要提交 `.env*`（示例文件除外）、`uploads/`、日志、构建产物或数据库备份。
 
-## 9. 互助群
+## 公开衍生产物
 
-对于完全不是**程序员**的用户，确实会对于更新代码后，如何同步，如何**合并代码**手足无措。我创建了一个 **QQ群**（加群会简单点），或者 vx 群还是 tg 群会好一点可以 issue 里面说下就行。
-
-QQ 群：[https://qm.qq.com/q/spdpenr4k2](https://qm.qq.com/q/spdpenr4k2)
-> 不好意思，之前的那个qq群ID（1021438316），不知道为啥搜不到😂
-
-微信群：刚建好了一个微信群，没有 qq 的可以用这个微信群
-![](https://www.yysuni.com/blogs/readme/343f2c62035b8e23.webp)
-
-tg 群：1月1号，才创建的 tg 群 https://t.me/public_blog_2025
-
-
-应该主要是我自己亲自帮助你们遇到问题怎么办。（后续看看有没有好心人）
-
-希望多多的非程序员加入 blogger 行列，web blog 还是很好玩的，属于自己的 blog 世界。
-
-游戏资产不一定属于你的，你只有**使用权**，但这个 blog **网站、内容、仓库一定是属于你的**
-
-#### 特殊的导航 Card
-
-因为这个 Card 是全局都在的，所以放在了 `src/components` 目录
-
-![](https://www.yysuni.com/blogs/readme/9780c38f886322fd.png)
-
-## Star History
-
-<a href="https://www.star-history.com/#YYsuni/2025-blog-public&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=YYsuni/2025-blog-public&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=YYsuni/2025-blog-public&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=YYsuni/2025-blog-public&type=date&legend=top-left" />
- </picture>
-</a>
+`/rss.xml`、`/sitemap.xml`、`/robots.txt` 与页面 SEO metadata 均在 Next.js 服务端通过公开后端 API 生成，并使用短期缓存和故障降级。历史静态 JSON 与 `frontend/public/blogs` 仅可作为显式数据迁移/兼容资料，不是生产运行时的数据源。

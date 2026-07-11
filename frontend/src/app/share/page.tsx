@@ -9,7 +9,6 @@ import CreateDialog from './components/create-dialog'
 import { pushShares } from './services/push-shares'
 import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
-import initialList from './list.json'
 import type { Share } from './components/share-card'
 import type { LogoItem } from './components/logo-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
@@ -17,8 +16,8 @@ import { deleteUploadedImage } from '@/lib/file-api'
 import { getAdminShares } from '@/lib/admin-content-api'
 
 export default function Page() {
-	const [shares, setShares] = useState<Share[]>(initialList as Share[])
-	const [originalShares, setOriginalShares] = useState<Share[]>(initialList as Share[])
+	const [shares, setShares] = useState<Share[]>([])
+	const [originalShares, setOriginalShares] = useState<Share[]>([])
 	const [isEditMode, setIsEditMode] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [editingShare, setEditingShare] = useState<Share | null>(null)

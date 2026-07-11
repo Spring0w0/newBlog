@@ -8,16 +8,15 @@ import { Plus, X } from 'lucide-react'
 import { DialogModal } from '@/components/dialog-modal'
 import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
-import initialList from './list.json'
 import { pushSnippets } from './services/push-snippets'
 import { usePublicResource } from '@/hooks/use-public-resource'
 
 const getRandomSnippet = (list: string[]) => (list.length === 0 ? '' : list[Math.floor(Math.random() * list.length)])
 
 export default function Page() {
-	const [snippets, setSnippets] = useState<string[]>(initialList as string[])
-	const [originalSnippets, setOriginalSnippets] = useState<string[]>(initialList as string[])
-	const [currentSnippet, setCurrentSnippet] = useState<string>(getRandomSnippet(initialList as string[]))
+	const [snippets, setSnippets] = useState<string[]>([])
+	const [originalSnippets, setOriginalSnippets] = useState<string[]>([])
+	const [currentSnippet, setCurrentSnippet] = useState<string>('')
 	const [isEditMode, setIsEditMode] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [isManageOpen, setIsManageOpen] = useState(false)

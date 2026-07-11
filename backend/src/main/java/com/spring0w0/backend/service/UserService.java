@@ -37,6 +37,11 @@ public class UserService {
         return findByUsername(username).filter(user -> Boolean.TRUE.equals(user.getEnabled()));
     }
 
+    public User getEnabledUser(String username) {
+        return findEnabledByUsername(username)
+                .orElseThrow(() -> new BusinessException(ResultCode.UNAUTHORIZED));
+    }
+
     private Optional<User> findByUsername(String username) {
         return Optional.ofNullable(userMapper.selectOne(
                 Wrappers.<User>lambdaQuery().eq(User::getUsername, username)

@@ -1,10 +1,8 @@
 import { create } from 'zustand'
-import siteContent from '@/config/site-content.json'
-import cardStyles from '@/config/card-styles.json'
 import { getPublic } from '@/lib/public-api'
+import { createDefaultCardStyles, createDefaultSiteContent, type CardStyles, type SiteContent } from './config-defaults'
 
-export type SiteContent = typeof siteContent
-export type CardStyles = typeof cardStyles
+export type { CardStyles, SiteContent } from './config-defaults'
 
 interface ConfigStore {
 	siteContent: SiteContent
@@ -21,8 +19,8 @@ interface ConfigStore {
 }
 
 export const useConfigStore = create<ConfigStore>((set, get) => ({
-	siteContent: { ...siteContent },
-	cardStyles: { ...cardStyles },
+	siteContent: createDefaultSiteContent(),
+	cardStyles: createDefaultCardStyles(),
 	regenerateKey: 0,
 	configDialogOpen: false,
 	setSiteContent: (content: SiteContent) => {
@@ -32,10 +30,10 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 		set({ cardStyles: styles })
 	},
 	resetSiteContent: () => {
-		set({ siteContent: { ...siteContent } })
+		set({ siteContent: createDefaultSiteContent() })
 	},
 	resetCardStyles: () => {
-		set({ cardStyles: { ...cardStyles } })
+		set({ cardStyles: createDefaultCardStyles() })
 	},
 	refreshPublicConfig: async () => {
 		const [nextSiteContent, nextCardStyles] = await Promise.all([

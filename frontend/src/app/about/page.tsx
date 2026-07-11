@@ -10,12 +10,13 @@ import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import LikeButton from '@/components/like-button'
 import GithubSVG from '@/svgs/github.svg'
-import initialData from './list.json'
 import { usePublicResource } from '@/hooks/use-public-resource'
 
+const EMPTY_ABOUT: AboutData = { title: '', description: '', content: '' }
+
 export default function Page() {
-	const [data, setData] = useState<AboutData>(initialData as AboutData)
-	const [originalData, setOriginalData] = useState<AboutData>(initialData as AboutData)
+	const [data, setData] = useState<AboutData>(EMPTY_ABOUT)
+	const [originalData, setOriginalData] = useState<AboutData>(EMPTY_ABOUT)
 	const [isEditMode, setIsEditMode] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [isPreviewMode, setIsPreviewMode] = useState(false)

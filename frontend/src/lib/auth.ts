@@ -1,4 +1,4 @@
-import { request, ApiError } from './api-client'
+import { get, request, ApiError } from './api-client'
 import { clearAuthTokens, getAccessToken, hasAccessToken, saveAuthTokens } from './auth-token'
 
 export interface LoginCredentials {
@@ -11,6 +11,7 @@ export interface AuthUser {
 	id?: string | number
 	username?: string
 	nickname?: string
+	role?: string
 	roles?: string[]
 	[key: string]: unknown
 }
@@ -60,7 +61,10 @@ export async function login(credentials: LoginCredentials): Promise<LoginResult>
 
 	clearLegacyAuthCache()
 
-	return result
+	return {
+		...result,
+		user: result.user ?? (await getCurrentUser())
+	}
 }
 
 export function clearAllAuthCache(): void {
@@ -69,7 +73,17 @@ export function clearAllAuthCache(): void {
 }
 
 export async function hasAuth(): Promise<boolean> {
-	return hasAccessToken()
+	if (!hasAccessToken()) return false
+	try {
+		await getCurrentUser()
+		return true
+	} catch {
+		return false
+	}
+}
+
+export function getCurrentUser(): Promise<AuthUser> {
+	return get<AuthUser>('/api/auth/me', { toastOnError: false })
 }
 
 export async function getAuthToken(): Promise<string> {

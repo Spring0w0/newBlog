@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { API_AUTH_ERROR_EVENT } from '@/lib/api-client'
-import { clearAllAuthCache, getAuthToken as getToken, hasAuth as checkAuth, login as loginWithPassword } from '@/lib/auth'
+import { clearAllAuthCache, getAuthToken as getToken, getCurrentUser, login as loginWithPassword } from '@/lib/auth'
+import { hasAccessToken } from '@/lib/auth-token'
 import type { AuthUser, LoginCredentials } from '@/lib/auth'
 
 type AuthSuccessHandler = () => void | Promise<void>
@@ -31,8 +32,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 	},
 
 	refreshAuthState: async () => {
-		const isAuth = await checkAuth()
-		set({ isAuth, user: isAuth ? get().user : null })
+		if (!hasAccessToken()) {
+			set({ isAuth: false, user: null })
+			return
+		}
+
+		try {
+			const user = await getCurrentUser()
+			set({ isAuth: true, user })
+		} catch {
+			set({ isAuth: false, user: null })
+		}
 	},
 
 	getAuthToken: async () => {
@@ -55,11 +65,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 	}
 }))
 
-checkAuth().then(isAuth => {
-	if (isAuth) {
-		useAuthStore.setState({ isAuth })
-	}
-})
+void useAuthStore.getState().refreshAuthState()
 
 if (typeof window !== 'undefined') {
 	window.addEventListener(API_AUTH_ERROR_EVENT, () => {

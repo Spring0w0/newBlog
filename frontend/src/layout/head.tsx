@@ -6,8 +6,6 @@ export default function Head() {
 			<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
 			<link rel='manifest' href='/manifest.json' />
 
-			<link rel='icon' href='/favicon.png' />
-
 			<link rel='preconnect' href='https://fonts.googleapis.cn' />
 			<link rel='preconnect' href='https://fonts.gstatic.cn' crossOrigin='anonymous' />
 

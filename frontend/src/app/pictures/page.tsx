@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import { mutate } from 'swr'
 import { toast } from 'sonner'
-import initialList from './list.json'
 import { RandomLayout } from './components/random-layout'
 import UploadDialog from './components/upload-dialog'
 import { pushPictures } from './services/push-pictures'
@@ -25,8 +24,8 @@ export interface Picture {
 }
 
 export default function Page() {
-	const [pictures, setPictures] = useState<Picture[]>(initialList as Picture[])
-	const [originalPictures, setOriginalPictures] = useState<Picture[]>(initialList as Picture[])
+	const [pictures, setPictures] = useState<Picture[]>([])
+	const [originalPictures, setOriginalPictures] = useState<Picture[]>([])
 	const [isEditMode, setIsEditMode] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)

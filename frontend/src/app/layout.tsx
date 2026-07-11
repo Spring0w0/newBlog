@@ -3,41 +3,58 @@ import '@/styles/globals.css'
 import type { Metadata } from 'next'
 import Layout from '@/layout'
 import Head from '@/layout/head'
-import siteContent from '@/config/site-content.json'
+import { DEFAULT_SITE_CONTENT, type SiteContent } from '@/app/(home)/stores/config-defaults'
+import { getPublicSiteUrl, getServerSiteConfig } from '@/lib/server-public-api'
 
-const {
-	meta: { title, description },
-	theme
-} = siteContent
-
-export const metadata: Metadata = {
-	title,
-	description,
-	openGraph: {
-		title,
-		description
-	},
-	twitter: {
-		title,
-		description
+async function loadSiteConfig(): Promise<SiteContent> {
+	try {
+		return await getServerSiteConfig()
+	} catch (error) {
+		console.warn('读取站点 metadata 配置失败，使用内置默认值：', error)
+		return DEFAULT_SITE_CONTENT
 	}
 }
 
-const htmlStyle = {
-	cursor: 'url(/images/cursor.svg) 2 1, auto',
-	'--color-brand': theme.colorBrand,
-	'--color-primary': theme.colorPrimary,
-	'--color-secondary': theme.colorSecondary,
-	'--color-brand-secondary': theme.colorBrandSecondary,
-	'--color-bg': theme.colorBg,
-	'--color-border': theme.colorBorder,
-	'--color-card': theme.colorCard,
-	'--color-article': theme.colorArticle
+export async function generateMetadata(): Promise<Metadata> {
+	const siteContent = await loadSiteConfig()
+	const title = siteContent.meta.title
+	const description = siteContent.meta.description
+	return {
+		metadataBase: new URL(getPublicSiteUrl()),
+		title,
+		description,
+		icons: siteContent.faviconUrl ? { icon: siteContent.faviconUrl } : undefined,
+		openGraph: {
+			title,
+			description,
+			type: 'website',
+			url: '/'
+		},
+		twitter: {
+			card: 'summary',
+			title,
+			description
+		}
+	}
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+	const siteContent = await loadSiteConfig()
+	const { theme } = siteContent
+	const htmlStyle = {
+		cursor: 'url(/images/cursor.svg) 2 1, auto',
+		'--color-brand': theme.colorBrand,
+		'--color-primary': theme.colorPrimary,
+		'--color-secondary': theme.colorSecondary,
+		'--color-brand-secondary': theme.colorBrandSecondary,
+		'--color-bg': theme.colorBg,
+		'--color-border': theme.colorBorder,
+		'--color-card': theme.colorCard,
+		'--color-article': theme.colorArticle
+	} as React.CSSProperties
+
 	return (
-		<html lang='en' suppressHydrationWarning style={htmlStyle}>
+		<html lang='zh-CN' suppressHydrationWarning style={htmlStyle}>
 			<Head />
 
 			<body>
@@ -47,7 +64,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 					if (/windows|win32/i.test(navigator.userAgent)) {
 						document.documentElement.classList.add('windows');
 					}
-		      `
+			      `
 					}}
 				/>
 

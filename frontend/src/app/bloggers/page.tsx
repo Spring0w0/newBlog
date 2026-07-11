@@ -9,15 +9,14 @@ import CreateDialog from './components/create-dialog'
 import { pushBloggers } from './services/push-bloggers'
 import { useAuthStore } from '@/hooks/use-auth'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
-import initialList from './list.json'
 import type { AvatarItem } from './components/avatar-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
 import { deleteUploadedImage } from '@/lib/file-api'
 import { getAdminBloggers } from '@/lib/admin-content-api'
 
 export default function Page() {
-	const [bloggers, setBloggers] = useState<Blogger[]>(initialList as Blogger[])
-	const [originalBloggers, setOriginalBloggers] = useState<Blogger[]>(initialList as Blogger[])
+	const [bloggers, setBloggers] = useState<Blogger[]>([])
+	const [originalBloggers, setOriginalBloggers] = useState<Blogger[]>([])
 	const [isEditMode, setIsEditMode] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
 	const [editingBlogger, setEditingBlogger] = useState<Blogger | null>(null)

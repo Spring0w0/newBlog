@@ -3,7 +3,7 @@
 import { motion } from 'motion/react'
 import { useConfigStore, type CardStyles } from '../stores/config-store'
 import { useLayoutEditStore } from '../stores/layout-edit-store'
-import cardStylesDefault from '@/config/card-styles-default.json'
+import { createResetCardStyles } from '../stores/config-defaults'
 
 const CARD_LABELS: Record<string, string> = {
 	artCard: '首图',
@@ -39,7 +39,7 @@ export function HomeLayout({ cardStylesData, setCardStylesData, onClose }: HomeL
 	}
 
 	const handleReset = () => {
-		setCardStylesData(cardStylesDefault as unknown as CardStyles)
+		setCardStylesData(createResetCardStyles())
 	}
 
 	return (

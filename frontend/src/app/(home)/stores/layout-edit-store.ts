@@ -67,8 +67,8 @@ export const useLayoutEditStore = create<LayoutEditState>((set, get) => ({
 			...cardStyles,
 			[key]: {
 				...cardStyles[key],
-				width,
-				height
+				width: width ?? cardStyles[key].width,
+				height: height ?? cardStyles[key].height
 			}
 		}
 

@@ -5,7 +5,7 @@ import Card from '@/components/card'
 import { useCenterStore } from '@/hooks/use-center'
 import { useConfigStore } from './stores/config-store'
 import { CARD_SPACING } from '@/consts'
-import shareList from '@/app/share/list.json'
+import { usePublicResource } from '@/hooks/use-public-resource'
 import Link from 'next/link'
 import { HomeDraggableLayer } from './home-draggable-layer'
 
@@ -22,14 +22,19 @@ export default function ShareCard() {
 	const center = useCenterStore()
 	const { cardStyles, siteContent } = useConfigStore()
 	const [randomItem, setRandomItem] = useState<ShareItem | null>(null)
+	const { data: shares } = usePublicResource<ShareItem[]>('/api/shares')
 	const styles = cardStyles.shareCard
 	const hiCardStyles = cardStyles.hiCard
 	const socialButtonsStyles = cardStyles.socialButtons
 
 	useEffect(() => {
-		const randomIndex = Math.floor(Math.random() * shareList.length)
-		setRandomItem(shareList[randomIndex])
-	}, [])
+		if (!shares || shares.length === 0) {
+			setRandomItem(null)
+			return
+		}
+		const randomIndex = Math.floor(Math.random() * shares.length)
+		setRandomItem(shares[randomIndex])
+	}, [shares])
 
 	if (!randomItem) {
 		return null
