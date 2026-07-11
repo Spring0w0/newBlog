@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
+import { mutate } from 'swr'
 import { toast } from 'sonner'
 import GridView, { type Blogger } from './grid-view'
 import CreateDialog from './components/create-dialog'
@@ -12,6 +13,7 @@ import initialList from './list.json'
 import type { AvatarItem } from './components/avatar-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
 import { deleteUploadedImage } from '@/lib/file-api'
+import { getAdminBloggers } from '@/lib/admin-content-api'
 
 export default function Page() {
 	const [bloggers, setBloggers] = useState<Blogger[]>(initialList as Blogger[])
@@ -34,7 +36,7 @@ export default function Page() {
 	}, [publicBloggers, isEditMode])
 
 	const handleUpdate = (updatedBlogger: Blogger, oldBlogger: Blogger, avatarItem?: AvatarItem) => {
-		setBloggers(prev => prev.map(b => (b.url === oldBlogger.url ? updatedBlogger : b)))
+		setBloggers(prev => prev.map(b => (isSameBlogger(b, oldBlogger) ? updatedBlogger : b)))
 		if (avatarItem) {
 			setAvatarItems(prev => {
 				const newMap = new Map(prev)
@@ -51,7 +53,7 @@ export default function Page() {
 
 	const handleSaveBlogger = (updatedBlogger: Blogger, avatarItem?: AvatarItem) => {
 		if (editingBlogger) {
-			const updated = bloggers.map(b => (b.url === editingBlogger.url ? updatedBlogger : b))
+			const updated = bloggers.map(b => (isSameBlogger(b, editingBlogger) ? updatedBlogger : b))
 			setBloggers(updated)
 		} else {
 			setBloggers([...bloggers, updatedBlogger])
@@ -67,7 +69,7 @@ export default function Page() {
 			if (pendingAvatar?.type === 'url' && pendingAvatar.fileId) {
 				void deleteUploadedImage(pendingAvatar.fileId).catch(error => console.error('清理未保存头像失败:', error))
 			}
-			setBloggers(bloggers.filter(b => b.url !== blogger.url))
+			setBloggers(bloggers.filter(b => !isSameBlogger(b, blogger)))
 			setAvatarItems(prev => {
 				const next = new Map(prev)
 				next.delete(blogger.url)
@@ -78,9 +80,25 @@ export default function Page() {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
-			handleSave()
+			void handleSave()
+		}
+	}
+
+	const enterEditMode = async () => {
+		if (!isAuth) {
+			openLoginDialog(() => enterEditMode())
+			return
+		}
+		try {
+			const managedBloggers = await getAdminBloggers()
+			setBloggers(managedBloggers)
+			setOriginalBloggers(managedBloggers)
+			setIsEditMode(true)
+		} catch (error: any) {
+			console.error('Failed to load admin bloggers:', error)
+			toast.error(error?.message || '加载管理数据失败')
 		}
 	}
 
@@ -88,13 +106,12 @@ export default function Page() {
 		setIsSaving(true)
 
 		try {
-			await pushBloggers({
-				bloggers,
-				avatarItems
-			})
+			const savedBloggers = await pushBloggers({ bloggers })
 
-			setOriginalBloggers(bloggers)
+			setBloggers(savedBloggers)
+			setOriginalBloggers(savedBloggers)
 			setAvatarItems(new Map())
+			await mutate('/api/bloggers')
 			setIsEditMode(false)
 			toast.success('保存成功！')
 		} catch (error: any) {
@@ -121,7 +138,7 @@ export default function Page() {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isEditMode && (e.ctrlKey || e.metaKey) && e.key === ',') {
 				e.preventDefault()
-				setIsEditMode(true)
+				void enterEditMode()
 			}
 		}
 
@@ -129,7 +146,7 @@ export default function Page() {
 		return () => {
 			window.removeEventListener('keydown', handleKeyDown)
 		}
-	}, [isEditMode])
+	}, [isEditMode, isAuth])
 
 	return (
 		<>
@@ -162,7 +179,7 @@ export default function Page() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							onClick={() => setIsEditMode(true)}
+							onClick={() => void enterEditMode()}
 							className='bg-card rounded-xl border px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80'>
 							编辑
 						</motion.button>
@@ -173,4 +190,8 @@ export default function Page() {
 			{isCreateDialogOpen && <CreateDialog blogger={editingBlogger} onClose={() => setIsCreateDialogOpen(false)} onSave={handleSaveBlogger} />}
 		</>
 	)
+}
+
+function isSameBlogger(left: Blogger, right: Blogger): boolean {
+	return left.id !== undefined && right.id !== undefined ? left.id === right.id : left.url === right.url
 }

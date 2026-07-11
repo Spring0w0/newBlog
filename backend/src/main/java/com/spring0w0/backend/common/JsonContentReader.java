@@ -54,4 +54,12 @@ public class JsonContentReader {
         });
         return result;
     }
+
+    public String writeStringList(List<String> values) {
+        try {
+            return objectMapper.writeValueAsString(values == null ? List.of() : values);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("无法序列化字符串列表", exception);
+        }
+    }
 }

@@ -8,6 +8,7 @@ import { useSize } from '@/hooks/use-size'
 import ImageUploadDialog, { type ImageItem } from './image-upload-dialog'
 
 export interface Project {
+	id?: number
 	name: string
 	year: number
 	description: string

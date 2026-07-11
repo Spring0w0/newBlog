@@ -41,6 +41,10 @@ public interface FileReferenceMapper {
                        OR logo_url LIKE CONCAT('%/images/', #{relativePath}))
               + (SELECT COUNT(*) FROM pictures
                     WHERE JSON_SEARCH(images, 'one', CONCAT('%/images/', #{relativePath})) IS NOT NULL)
+              + (SELECT COUNT(*) FROM picture_images
+                    WHERE file_asset_id = (SELECT id FROM file_assets WHERE relative_path = #{relativePath})
+                       OR url = CONCAT('/images/', #{relativePath})
+                       OR url LIKE CONCAT('%/images/', #{relativePath}))
             """)
     long countByRelativePath(@Param("relativePath") String relativePath);
 }

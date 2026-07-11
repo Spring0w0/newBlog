@@ -1,9 +1,11 @@
 package com.spring0w0.backend;
 
 import com.spring0w0.backend.mapper.UserMapper;
+import com.spring0w0.backend.mapper.FileAssetMapper;
 import com.spring0w0.backend.pojo.entity.User;
 import com.spring0w0.backend.pojo.entity.FileAsset;
 import com.spring0w0.backend.pojo.vo.AdminBlogSummaryVo;
+import com.spring0w0.backend.pojo.vo.AdminBloggerVo;
 import com.spring0w0.backend.pojo.vo.BlogSummaryVo;
 import com.spring0w0.backend.pojo.vo.PageVo;
 import com.spring0w0.backend.service.AboutService;
@@ -74,6 +76,9 @@ class BackendApplicationTests {
 
     @MockitoBean
     private UserMapper userMapper;
+
+    @MockitoBean
+    private FileAssetMapper fileAssetMapper;
 
     @MockitoBean
     private BlogService blogService;
@@ -191,6 +196,20 @@ class BackendApplicationTests {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.items[0].id").value(12))
                 .andExpect(jsonPath("$.data.items[0].slug").value("managed-post"));
+    }
+
+    @Test
+    void administratorCanReadBloggerManagementList() throws Exception {
+        when(bloggerService.getAdminBloggers()).thenReturn(List.of(
+                new AdminBloggerVo(7L, "测试博主", "/images/bloggers/avatar.png", "https://example.com", "简介", 3, "recent")
+        ));
+        String token = jwtTokenService.createAccessToken("admin", "ADMIN");
+
+        mockMvc.perform(get("/api/admin/bloggers").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0].id").value(7))
+                .andExpect(jsonPath("$.data[0].name").value("测试博主"));
     }
 
     @Test

@@ -9,6 +9,7 @@ import { useState } from 'react'
 import LogoUploadDialog, { type LogoItem } from './logo-upload-dialog'
 
 export interface Share {
+	id?: number
 	name: string
 	logo: string
 	url: string

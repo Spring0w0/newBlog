@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { mutate } from 'swr'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { useMarkdownRender } from '@/hooks/use-markdown-render'
@@ -27,9 +28,9 @@ export default function Page() {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
-			handleSave()
+			void handleSave()
 		}
 	}
 
@@ -42,11 +43,13 @@ export default function Page() {
 		setIsSaving(true)
 
 		try {
-			await pushAbout(data)
+			const saved = await pushAbout(data)
 
-			setOriginalData(data)
+			setData(saved)
+			setOriginalData(saved)
 			setIsEditMode(false)
 			setIsPreviewMode(false)
+			await mutate('/api/about')
 			toast.success('保存成功！')
 		} catch (error: any) {
 			console.error('Failed to save:', error)

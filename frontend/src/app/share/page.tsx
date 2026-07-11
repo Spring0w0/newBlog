@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
+import { mutate } from 'swr'
 import { toast } from 'sonner'
 import GridView from './grid-view'
 import CreateDialog from './components/create-dialog'
@@ -13,6 +14,7 @@ import type { Share } from './components/share-card'
 import type { LogoItem } from './components/logo-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
 import { deleteUploadedImage } from '@/lib/file-api'
+import { getAdminShares } from '@/lib/admin-content-api'
 
 export default function Page() {
 	const [shares, setShares] = useState<Share[]>(initialList as Share[])
@@ -35,7 +37,7 @@ export default function Page() {
 	}, [publicShares, isEditMode])
 
 	const handleUpdate = (updatedShare: Share, oldShare: Share, logoItem?: LogoItem) => {
-		setShares(prev => prev.map(s => (s.url === oldShare.url ? updatedShare : s)))
+		setShares(prev => prev.map(s => (isSameShare(s, oldShare) ? updatedShare : s)))
 		if (logoItem) {
 			setLogoItems(prev => {
 				const newMap = new Map(prev)
@@ -52,7 +54,7 @@ export default function Page() {
 
 	const handleSaveShare = (updatedShare: Share, logoItem?: LogoItem) => {
 		if (editingShare) {
-			setShares(shares.map(s => (s.url === editingShare.url ? updatedShare : s)))
+			setShares(shares.map(s => (isSameShare(s, editingShare) ? updatedShare : s)))
 		} else {
 			setShares([...shares, updatedShare])
 		}
@@ -71,7 +73,7 @@ export default function Page() {
 			if (pendingLogo?.type === 'url' && pendingLogo.fileId) {
 				void deleteUploadedImage(pendingLogo.fileId).catch(error => console.error('清理未保存图标失败:', error))
 			}
-			setShares(shares.filter(s => s.url !== share.url))
+			setShares(shares.filter(s => !isSameShare(s, share)))
 			setLogoItems(prev => {
 				const next = new Map(prev)
 				next.delete(share.url)
@@ -82,9 +84,25 @@ export default function Page() {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
-			handleSave()
+			void handleSave()
+		}
+	}
+
+	const enterEditMode = async () => {
+		if (!isAuth) {
+			openLoginDialog(() => enterEditMode())
+			return
+		}
+		try {
+			const managedShares = await getAdminShares()
+			setShares(managedShares)
+			setOriginalShares(managedShares)
+			setIsEditMode(true)
+		} catch (error: any) {
+			console.error('Failed to load admin shares:', error)
+			toast.error(error?.message || '加载管理数据失败')
 		}
 	}
 
@@ -92,14 +110,12 @@ export default function Page() {
 		setIsSaving(true)
 
 		try {
-			const updatedShares = await pushShares({
-				shares,
-				logoItems
-			})
+			const updatedShares = await pushShares({ shares })
 
 			setShares(updatedShares)
 			setOriginalShares(updatedShares)
 			setLogoItems(new Map())
+			await mutate('/api/shares')
 			setIsEditMode(false)
 			toast.success('保存成功！')
 		} catch (error: any) {
@@ -126,7 +142,7 @@ export default function Page() {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isEditMode && (e.ctrlKey || e.metaKey) && e.key === ',') {
 				e.preventDefault()
-				setIsEditMode(true)
+				void enterEditMode()
 			}
 		}
 
@@ -134,7 +150,7 @@ export default function Page() {
 		return () => {
 			window.removeEventListener('keydown', handleKeyDown)
 		}
-	}, [isEditMode])
+	}, [isEditMode, isAuth])
 
 	return (
 		<>
@@ -167,7 +183,7 @@ export default function Page() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							onClick={() => setIsEditMode(true)}
+							onClick={() => void enterEditMode()}
 							className='bg-card rounded-xl border px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80'>
 							编辑
 						</motion.button>
@@ -178,4 +194,8 @@ export default function Page() {
 			{isCreateDialogOpen && <CreateDialog share={editingShare} onClose={() => setIsCreateDialogOpen(false)} onSave={handleSaveShare} />}
 		</>
 	)
+}
+
+function isSameShare(left: Share, right: Share): boolean {
+	return left.id !== undefined && right.id !== undefined ? left.id === right.id : left.url === right.url
 }

@@ -16,6 +16,7 @@ public class Share {
     private String name;
     private String url;
     private String logoUrl;
+    private Long logoFileAssetId;
     private String description;
     private String tags;
     private Integer stars;

@@ -12,7 +12,7 @@
 | 2 | 公开内容读取 | 已实现 |
 | 3 | 图片/文件上传与静态资源映射 | 已实现 |
 | 4 | 博客后台 CRUD、分类管理 | 已实现 |
-| 5 | about、博主、项目、友链、相册、片段后台 CRUD | 已设计 |
+| 5 | about、博主、项目、友链、相册、片段后台 CRUD | 已实现 |
 | 6 | 站点配置、卡片样式后台保存 | 已设计 |
 | 7 | RSS、sitemap、SEO 数据消费 | 已设计 |
 | 8 | 移除 GitHub CMS 旧链路 | 已设计 |
@@ -96,7 +96,7 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-管理端列表接口从设计之初采用该分页结构。
+文章管理端列表采用该分页结构。博主、项目、友链和相册属于当前规模较小的完整配置集合，管理端暂时返回完整数组；若未来引入分页，必须新增明确接口或先完成前端契约迁移，不能静默改变现有响应结构。
 
 ## 3. 认证与当前用户
 
@@ -213,7 +213,6 @@ Authorization: Bearer <accessToken>
 
 ```ts
 type Blogger = {
-  id?: number
   name: string
   avatar: string
   url: string
@@ -223,7 +222,6 @@ type Blogger = {
 }
 
 type Project = {
-  id?: number
   name: string
   year?: number
   description: string
@@ -235,7 +233,6 @@ type Project = {
 }
 
 type Share = {
-  id?: number
   name: string
   logo?: string
   url: string
@@ -402,20 +399,56 @@ newBlog/
 - 保存分类时，不允许直接删除仍被文章使用的分类，返回 `422`；调用方应先更新文章分类再保存分类顺序。
 - 文章/分类写入成功后会失效后端的公开文章列表、文章详情和分类 Caffeine 缓存；前端管理页同时重新验证 `/api/blogs` 与 `/api/categories`。RSS、sitemap 目前直接消费公开 API，没有额外的应用内缓存副本。
 
-## 7. 其他内容管理接口（阶段 5）
+## 7. 其他内容管理接口（迭代 D）
 
-读取仍使用第 4.3 节公开接口；写入统一位于 `/api/admin`。
+公开读取仍使用第 4.3 节接口；所有 `/api/admin/**` 写入接口均要求 `ADMIN` 与 Bearer Token。管理端列表项额外返回稳定数据库 `id`，前端不得再以名称、URL 或数组下标作为更新、删除依据。
 
-| 资源 | 管理端接口 |
-|---|---|
-| about | `PUT /api/admin/about` |
-| snippets | `PUT /api/admin/snippets`，body 为 `{ "items": ["..."] }` |
-| bloggers | `POST /api/admin/bloggers`、`PUT /api/admin/bloggers/{id}`、`DELETE /api/admin/bloggers/{id}` |
-| projects | `POST /api/admin/projects`、`PUT /api/admin/projects/{id}`、`DELETE /api/admin/projects/{id}` |
-| shares | `POST /api/admin/shares`、`PUT /api/admin/shares/{id}`、`DELETE /api/admin/shares/{id}` |
-| pictures | `POST /api/admin/pictures`、`PUT /api/admin/pictures/{id}`、`DELETE /api/admin/pictures/{id}` |
+| 资源 | 管理端接口 | 保存方式 | 状态 |
+|---|---|---|---|
+| about | `PUT /api/admin/about` | 单例整体替换 | 已实现 |
+| snippets | `PUT /api/admin/snippets` | 列表整体替换及顺序保存 | 已实现 |
+| bloggers | `GET/POST /api/admin/bloggers`、`PUT/DELETE /api/admin/bloggers/{id}` | 单项 CRUD，创建追加到末尾 | 已实现 |
+| projects | `GET/POST /api/admin/projects`、`PUT/DELETE /api/admin/projects/{id}` | 单项 CRUD，创建追加到末尾 | 已实现 |
+| shares | `GET/POST /api/admin/shares`、`PUT/DELETE /api/admin/shares/{id}` | 单项 CRUD，创建追加到末尾 | 已实现 |
+| pictures | `GET/POST /api/admin/pictures`、`PUT/DELETE /api/admin/pictures/{id}` | 相册分组 CRUD；一组包含有序多图 | 已实现 |
 
-写入 DTO 与公开 DTO 保持同名字段；管理员创建后的响应必须额外返回稳定的数据库 `id`，供后续更新和删除使用。
+### 7.1 关于页与片段
+
+`PUT /api/admin/about` 请求与响应均为：
+
+```json
+{
+  "title": "关于我",
+  "description": "一句简介",
+  "content": "# Markdown 正文"
+}
+```
+
+`title`、`description`、`content` 均为必填文本。`PUT /api/admin/snippets` 使用：
+
+```json
+{ "items": ["第一句", "第二句"] }
+```
+
+片段列表至少一项，单项不能为空；请求数组顺序就是公开展示顺序。两个保存操作均在成功后失效对应公开缓存。
+
+### 7.2 博主、项目与友链
+
+管理端列表和创建/更新响应分别使用 `AdminBloggerVo`、`AdminProjectVo`、`AdminShareVo`，在公开字段基础上增加 `id`。请求体沿用公开字段名：
+
+- 博主：`name`、`avatar`、`url`、`description`、`stars`、`status`；头像的受管 URL 必须属于 `bloggers` scope。
+- 项目：`name`、`year`、`description`、`image`、`url`、`tags`、`github`、`npm`；图片的受管 URL 必须属于 `projects` scope。
+- 友链：`name`、`logo`、`url`、`description`、`tags`、`stars`；Logo 的受管 URL 必须属于 `shares` scope。
+
+名称、站点 URL、说明和必需图片不能为空；星级范围为 `0`–`5`，标签按数组顺序去重并保存。URL 可以是外部 HTTP(S) 地址、历史静态路径，或对应 scope 的受管 `/images/...` 地址；若提交受管地址，后端必须校验对应 `file_assets` 记录存在并建立引用。删除资源只删除业务记录与文件引用，不会直接删除上传文件。
+
+### 7.3 相册
+
+相册管理端响应使用 `AdminPictureVo`，在公开 `id`、`uploadedAt`、`description`、`images` 基础上返回稳定的分组 ID。创建请求不传 `id`，由后端生成；更新/删除使用路径中的 `id`。一组至少包含一张图片，最多 50 张，图片数组顺序就是展示顺序。受管图片必须属于 `pictures` scope；后端在 `picture_images` 关系表中保存图片 URL、排序和 `file_assets` 引用，删除分组或替换图片后会释放对应引用。
+
+所有上述写入操作返回 `400`（参数不合法）、`401`、`403`、`404`（目标不存在）、`409`（唯一约束冲突）、`422`（受管文件 scope 不匹配或文件不存在）或 `500`；前端成功后必须重新验证对应公开 SWR key。
+
+Flyway `V7__link_content_images_to_file_assets.sql` 为博主、项目、友链增加受管图片的 `file_assets` 外键，并创建 `picture_images` 关系表。迁移会回填能匹配到受管图片的历史 URL；旧静态路径或外部 URL 继续保留 URL 本身，但不会伪造文件引用。
 
 ## 8. 首页配置管理接口（阶段 6）
 

@@ -8,6 +8,7 @@ import { BloggerCard } from './components/blogger-card'
 export type BloggerStatus = 'recent' | 'disconnected'
 
 export interface Blogger {
+	id?: number
 	name: string
 	avatar: string
 	url: string

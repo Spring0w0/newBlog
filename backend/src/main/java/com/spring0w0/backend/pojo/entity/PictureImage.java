@@ -6,19 +6,21 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
+/**
+ * 相册分组中的图片引用。
+ */
 @Getter
 @Setter
-@TableName("bloggers")
-public class Blogger {
+@TableName("picture_images")
+public class PictureImage {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String name;
-    private String avatarUrl;
-    private Long avatarFileAssetId;
+    private String pictureId;
+    private Long fileAssetId;
     private String url;
-    private String description;
-    private Integer stars;
-    private String status;
     private Integer sortOrder;
+    private LocalDateTime createdAt;
 }

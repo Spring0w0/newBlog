@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { mutate } from 'swr'
 import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { Plus, X } from 'lucide-react'
@@ -52,9 +53,12 @@ export default function Page() {
 	const handleSave = async () => {
 		setIsSaving(true)
 		try {
-			await pushSnippets({ snippets })
-			setOriginalSnippets(snippets)
+			const saved = await pushSnippets({ snippets })
+			setSnippets(saved)
+			setOriginalSnippets(saved)
 			setIsEditMode(false)
+			setCurrentSnippet(getRandomSnippet(saved))
+			await mutate('/api/snippets')
 			toast.success('保存成功！')
 		} catch (error: any) {
 			console.error('Failed to save snippets:', error)
@@ -66,7 +70,7 @@ export default function Page() {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
 			void handleSave()
 		}

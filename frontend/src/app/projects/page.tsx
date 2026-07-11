@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
+import { mutate } from 'swr'
 import { toast } from 'sonner'
 import { ProjectCard, type Project } from './components/project-card'
 import CreateDialog from './components/create-dialog'
@@ -12,6 +13,7 @@ import initialList from './list.json'
 import type { ImageItem } from './components/image-upload-dialog'
 import { usePublicResource } from '@/hooks/use-public-resource'
 import { deleteUploadedImage } from '@/lib/file-api'
+import { getAdminProjects } from '@/lib/admin-content-api'
 
 export default function Page() {
 	const [projects, setProjects] = useState<Project[]>(initialList as Project[])
@@ -34,7 +36,7 @@ export default function Page() {
 	}, [publicProjects, isEditMode])
 
 	const handleUpdate = (updatedProject: Project, oldProject: Project, imageItem?: ImageItem) => {
-		setProjects(prev => prev.map(p => (p.url === oldProject.url ? updatedProject : p)))
+		setProjects(prev => prev.map(p => (isSameProject(p, oldProject) ? updatedProject : p)))
 		if (imageItem) {
 			setImageItems(prev => {
 				const newMap = new Map(prev)
@@ -51,7 +53,7 @@ export default function Page() {
 
 	const handleSaveProject = (updatedProject: Project, imageItem?: ImageItem) => {
 		if (editingProject) {
-			const updated = projects.map(p => (p.url === editingProject.url ? updatedProject : p))
+			const updated = projects.map(p => (isSameProject(p, editingProject) ? updatedProject : p))
 			setProjects(updated)
 		} else {
 			setProjects([...projects, updatedProject])
@@ -67,7 +69,7 @@ export default function Page() {
 			if (pendingImage?.type === 'url' && pendingImage.fileId) {
 				void deleteUploadedImage(pendingImage.fileId).catch(error => console.error('清理未保存项目图片失败:', error))
 			}
-			setProjects(projects.filter(p => p.url !== project.url))
+			setProjects(projects.filter(p => !isSameProject(p, project)))
 			setImageItems(prev => {
 				const next = new Map(prev)
 				next.delete(project.url)
@@ -78,9 +80,25 @@ export default function Page() {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
-			handleSave()
+			void handleSave()
+		}
+	}
+
+	const enterEditMode = async () => {
+		if (!isAuth) {
+			openLoginDialog(() => enterEditMode())
+			return
+		}
+		try {
+			const managedProjects = await getAdminProjects()
+			setProjects(managedProjects)
+			setOriginalProjects(managedProjects)
+			setIsEditMode(true)
+		} catch (error: any) {
+			console.error('Failed to load admin projects:', error)
+			toast.error(error?.message || '加载管理数据失败')
 		}
 	}
 
@@ -88,13 +106,12 @@ export default function Page() {
 		setIsSaving(true)
 
 		try {
-			await pushProjects({
-				projects,
-				imageItems
-			})
+			const savedProjects = await pushProjects({ projects })
 
-			setOriginalProjects(projects)
+			setProjects(savedProjects)
+			setOriginalProjects(savedProjects)
 			setImageItems(new Map())
+			await mutate('/api/projects')
 			setIsEditMode(false)
 			toast.success('保存成功！')
 		} catch (error: any) {
@@ -121,7 +138,7 @@ export default function Page() {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isEditMode && (e.ctrlKey || e.metaKey) && e.key === ',') {
 				e.preventDefault()
-				setIsEditMode(true)
+				void enterEditMode()
 			}
 		}
 
@@ -129,7 +146,7 @@ export default function Page() {
 		return () => {
 			window.removeEventListener('keydown', handleKeyDown)
 		}
-	}, [isEditMode])
+	}, [isEditMode, isAuth])
 
 	return (
 		<>
@@ -168,7 +185,7 @@ export default function Page() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							onClick={() => setIsEditMode(true)}
+							onClick={() => void enterEditMode()}
 							className='bg-card rounded-xl border px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80'>
 							编辑
 						</motion.button>
@@ -179,4 +196,8 @@ export default function Page() {
 			{isCreateDialogOpen && <CreateDialog project={editingProject} onClose={() => setIsCreateDialogOpen(false)} onSave={handleSaveProject} />}
 		</>
 	)
+}
+
+function isSameProject(left: Project, right: Project): boolean {
+	return left.id !== undefined && right.id !== undefined ? left.id === right.id : left.url === right.url
 }

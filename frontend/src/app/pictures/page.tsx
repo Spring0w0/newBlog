@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
+import { mutate } from 'swr'
 import { toast } from 'sonner'
 import initialList from './list.json'
 import { RandomLayout } from './components/random-layout'
@@ -13,6 +14,7 @@ import type { ImageItem } from '../projects/components/image-upload-dialog'
 import { useRouter } from 'next/navigation'
 import { usePublicResource } from '@/hooks/use-public-resource'
 import { deleteUploadedImage } from '@/lib/file-api'
+import { getAdminPictures } from '@/lib/admin-content-api'
 
 export interface Picture {
 	id: string
@@ -188,9 +190,25 @@ export default function Page() {
 
 	const handleSaveClick = () => {
 		if (!isAuth) {
-			openLoginDialog(handleSave)
+			openLoginDialog()
 		} else {
-			handleSave()
+			void handleSave()
+		}
+	}
+
+	const enterEditMode = async () => {
+		if (!isAuth) {
+			openLoginDialog(() => enterEditMode())
+			return
+		}
+		try {
+			const managedPictures = await getAdminPictures()
+			setPictures(managedPictures)
+			setOriginalPictures(managedPictures)
+			setIsEditMode(true)
+		} catch (error: any) {
+			console.error('Failed to load admin pictures:', error)
+			toast.error(error?.message || '加载管理数据失败')
 		}
 	}
 
@@ -198,13 +216,12 @@ export default function Page() {
 		setIsSaving(true)
 
 		try {
-			await pushPictures({
-				pictures,
-				imageItems
-			})
+			const savedPictures = await pushPictures({ pictures })
 
-			setOriginalPictures(pictures)
+			setPictures(savedPictures)
+			setOriginalPictures(savedPictures)
 			setImageItems(new Map())
+			await mutate('/api/pictures')
 			setIsEditMode(false)
 			toast.success('保存成功！')
 		} catch (error: any) {
@@ -231,7 +248,7 @@ export default function Page() {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (!isEditMode && (e.ctrlKey || e.metaKey) && e.key === ',') {
 				e.preventDefault()
-				setIsEditMode(true)
+				void enterEditMode()
 			}
 		}
 
@@ -239,7 +256,7 @@ export default function Page() {
 		return () => {
 			window.removeEventListener('keydown', handleKeyDown)
 		}
-	}, [isEditMode])
+	}, [isEditMode, isAuth])
 
 	return (
 		<>
@@ -285,7 +302,7 @@ export default function Page() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							onClick={() => setIsEditMode(true)}
+							onClick={() => void enterEditMode()}
 							className='rounded-xl border bg-white/60 px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80'>
 							编辑
 						</motion.button>

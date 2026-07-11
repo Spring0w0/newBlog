@@ -17,6 +17,7 @@ public class Project {
     private Integer projectYear;
     private String description;
     private String imageUrl;
+    private Long imageFileAssetId;
     private String url;
     private String tags;
     private String githubUrl;
