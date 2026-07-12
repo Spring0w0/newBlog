@@ -37,8 +37,6 @@ type RawLoginResponse =
 			[key: string]: unknown
 	  }
 
-const LEGACY_AUTH_KEYS = ['github_token', 'p_info']
-
 export async function login(credentials: LoginCredentials): Promise<LoginResult> {
 	const response = await request<RawLoginResponse>('/api/auth/login', {
 		method: 'POST',
@@ -59,8 +57,6 @@ export async function login(credentials: LoginCredentials): Promise<LoginResult>
 		{ remember: credentials.remember }
 	)
 
-	clearLegacyAuthCache()
-
 	return {
 		...result,
 		user: result.user ?? (await getCurrentUser())
@@ -69,7 +65,6 @@ export async function login(credentials: LoginCredentials): Promise<LoginResult>
 
 export function clearAllAuthCache(): void {
 	clearAuthTokens()
-	clearLegacyAuthCache()
 }
 
 export async function hasAuth(): Promise<boolean> {
@@ -113,17 +108,5 @@ function normalizeLoginResponse(response: RawLoginResponse): LoginResult {
 		accessToken,
 		refreshToken: typeof refreshToken === 'string' ? refreshToken : undefined,
 		user
-	}
-}
-
-function clearLegacyAuthCache(): void {
-	if (typeof sessionStorage === 'undefined') return
-
-	try {
-		for (const key of LEGACY_AUTH_KEYS) {
-			sessionStorage.removeItem(key)
-		}
-	} catch {
-		// ignore
 	}
 }

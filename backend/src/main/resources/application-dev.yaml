@@ -30,6 +30,9 @@ app:
   security:
     jwt:
       secret: newblog-development-jwt-secret-change-me-before-production
+    initial-admin:
+      username: admin
+      password: admin
   cors:
     allowed-origins: http://localhost:2025,http://localhost:3000
   upload:

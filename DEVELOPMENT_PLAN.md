@@ -20,14 +20,14 @@
 
 | 能力 | 状态 | 备注 |
 |---|---|---|
-| 统一响应、业务异常、JWT 鉴权、管理员登录 | 已完成 | 管理员初始账号为 `admin` / `admin` |
+| 统一响应、业务异常、JWT 鉴权、管理员登录 | 已完成 | 开发环境使用 `admin` / `admin`；生产环境由 `INITIAL_ADMIN_*` 仅在空用户表时创建首个管理员 |
 | Swagger / OpenAPI 接口文档 | 已完成 | 开发环境通过 `/swagger` 与 `/v3/api-docs` 提供文档；生产环境默认关闭 |
 | 前端 API Client 与登录联调 | 已完成 | 浏览器端通过后端 API 访问数据 |
 | 公开站点配置、文章、分类和其他内容读取 | 已完成 | 已按根级 `controller → service → mapper → pojo/entity + pojo/vo` 拆分并完成真实数据库联调 |
-| 静态内容导入数据库 | 已完成 | 仅作为显式迁移工具，不参与正常运行时写入 |
+| 历史样例内容与导入工具 | 已移除 | 项目不再携带示例文章、静态 JSON 或一次性导入器；生产从空内容库开始 |
 | 图片上传与公开静态资源映射 | 已完成 | 六种 scope 的上传、公开访问、删除与前端各图片选择入口均已联调 |
 | 管理端文章及其他内容写入 | 已完成 | 文章、分类、about、片段、博主、项目、友链和相册均已迁入后端管理 API |
-| GitHub CMS 完全移除 | 已完成 | 前端运行时不再调用 GitHub API，也不再以静态 JSON 或 `frontend/public/blogs` 作为内容主数据源 |
+| GitHub CMS 完全移除 | 已完成 | 前端运行时不再调用 GitHub API，项目中也不再保留旧静态内容源 |
 
 公开读取链路已完成规范化：Controller 只处理 HTTP 与参数边界并记录请求日志，Service 承载业务规则与 VO 组装，Mapper 只负责数据库访问。后续新增的管理端接口也必须遵循同一结构。
 
@@ -44,7 +44,7 @@
 
 ### 3.2 数据、文件与安全边界
 
-- 业务主数据以 MySQL 为唯一事实来源；旧 JSON 和 Markdown 只用于导入、历史资源兼容或短期开发兜底。
+- 业务主数据以 MySQL 为唯一事实来源；项目不保留旧 JSON、Markdown 文章目录或一次性导入器作为内容来源。
 - 运行期上传文件位于工作区根目录 `uploads/`，与 `backend/`、`frontend/` 平级，不写入源码目录或 Git。
 - 文件由后端以 `/images/**` 只读公开映射；上传、删除和引用检查只能走管理员 API。
 - 管理写接口统一使用 `/api/admin/**`，要求 `ADMIN` 和 Bearer Token；公开读取接口不暴露管理字段、真实物理路径或凭据。
@@ -63,7 +63,6 @@ com.spring0w0.backend/
 │   ├── entity/       # 与数据库表映射的持久化对象
 │   ├── dto/          # Controller 接收的请求对象
 │   └── vo/           # Controller 返回给前端的响应对象
-├── importer/         # 显式历史数据导入工具
 ├── config/           # OpenAPI 等全局框架配置
 ├── auth/
 │   ├── config/       # JWT 与安全配置
@@ -79,7 +78,7 @@ com.spring0w0.backend/
 - **Entity** 只能表达表结构和持久化字段，不能向前端直接返回。
 - **DTO** 只表达输入，例如登录请求、上传请求、创建/更新命令；纯 GET 且没有请求体的接口不创建空 DTO。
 - **VO** 只表达输出，例如登录结果、文章摘要和文章详情；返回字段以 API 契约为准，不能泄露 Entity 中的内部字段。
-- 配置、异常、安全过滤器和显式迁移导入工具属于横切或基础设施代码，可保留在 `auth/config`、`auth/security`、`exception`、`importer` 等包中。
+- 配置、异常和安全过滤器属于横切或基础设施代码，可保留在 `auth/config`、`auth/security`、`exception` 等包中。
 
 ### 3.4 验收与提交原则
 
@@ -241,7 +240,7 @@ com.spring0w0.backend/
 完成记录：
 
 - 已实现 `PUT /api/admin/site/config`、`PUT /api/admin/site/card-styles` 和配置弹窗使用的 `PUT /api/admin/site/settings`；后者在同一事务中保存完整站点配置、Art 图片、背景图片、社交按钮和卡片样式，避免部分保存。
-- 继续兼容前端现有 `site-content.json`、`card-styles.json` 数据形状：站点 JSON 保留未知字段，卡片样式保留既有扩展字段（如 `offset`），不要求前端重写配置模型。
+- 保持现有站点配置与卡片样式 API 数据形状：站点 JSON 保留未知字段，卡片样式保留既有扩展字段（如 `offset`），不要求前端重写配置模型。
 - 保存时校验站点标题/描述、颜色、背景颜色数量、帽子索引、资源 ID、社交按钮、卡片 key 与数值范围；所有受管 `/images/site/**` 图片会验证 `file_assets` 记录和 scope，并规范化为数据库相对路径。外部 URL 和历史静态资源继续可用。
 - Art 图片、背景图片和社交按钮关系表会在配置保存时同步替换，确保移除的图片引用不再阻止后续文件清理；公开响应将受管图片恢复为环境对应的绝对 URL。既有表已经满足该关系保存需求，本轮无需新增 Flyway 迁移。
 - 前端配置弹窗已移除 GitHub 提交逻辑，改走统一管理 API；成功后同步 Zustand Store、重新读取公开配置并更新主题预览，取消编辑时仍会清理本轮未保存上传的图片。
@@ -255,7 +254,7 @@ com.spring0w0.backend/
 
 - 已实现受 JWT 保护的 `GET /api/auth/me`。前端在保存登录 Token 后读取当前用户；刷新页面时仅在本地存在 Token 时验证会话，避免未登录用户产生无意义的认证请求。
 - RSS、sitemap、robots 与页面 SEO metadata 已改由 Next.js 服务端消费公开后端 API。生产读取可使用 `INTERNAL_API_BASE_URL` 走内网，默认缓存窗口为 300 秒；公开 API 故障时保留可用的降级结果。
-- 已移除 GitHub Client、GitHub App 依赖与 `jsrsasign`；站点配置、内容页面和首页随机友链均不再将静态 JSON 作为运行时数据源。旧 JSON 与 `frontend/public/blogs` 仅保留为显式历史迁移/兼容资料。
+- 已移除 GitHub Client、GitHub App 依赖与 `jsrsasign`；站点配置、内容页面和首页随机友链均不再将静态 JSON 作为运行时数据源。
 - 已补齐认证、上传、管理写入、权限拒绝与迁移链路的中文 SLF4J 日志规范；日志不记录密码、Token 或文件物理路径。
 - 已更新前端环境变量示例和部署/备份说明，明确 MySQL 与根目录 `uploads/` 必须成对备份，以及生产 Swagger 默认关闭。
 
@@ -269,9 +268,20 @@ com.spring0w0.backend/
 
 验收：
 
-- 生产运行时不再调用 GitHub API，也不依赖 `frontend/public/blogs` 作为内容主数据源。
+- 生产运行时不再调用 GitHub API，所有内容均由后端 API 和数据库提供。
 - `/rss.xml`、`/sitemap.xml`、站点 metadata 与公开文章数据一致。
 - 全量测试、构建、关键用户路径回归和部署检查通过。
+
+### 迭代 G：零样例生产初始化（已完成，2026-07-12）
+
+**目标**：移除一次性历史导入链路和示例内容，使新生产数据库从空内容库安全启动。
+
+完成记录：
+
+- 已删除历史内容/图片导入器、前端历史文章目录、各资源 `list.json`、旧配置 JSON 和仅服务于示例内容的静态图片。
+- 已通过 Flyway `V8` 为空库提供通用站点配置、空 About 和默认卡片布局；文章、分类、博主、项目、友链、相册和片段不会被填充示例数据。
+- 旧版 `V3` 的固定 `admin/admin` 账号由 `V8` 移除；开发环境仍保留本地调试账号，生产环境必须设置 `INITIAL_ADMIN_USERNAME` 与 `INITIAL_ADMIN_PASSWORD`，且仅在用户表为空时创建首个管理员。
+- 本轮不修改现有开发库或 `uploads/`；“从零开始”适用于新生产数据库。
 
 ## 5. 依赖顺序与里程碑
 
@@ -297,4 +307,4 @@ com.spring0w0.backend/
 
 ## 7. 下一步
 
-路线图中的迭代 A–F 已全部完成，M5「生产链路收口」达成。下一项功能、生产部署方式或运维增强需求由后续需求确认后再建立新的迭代。
+路线图中的迭代 A–G 已全部完成，M5「生产链路收口」达成。下一步进入生产部署准备：确定部署架构、配置 HTTPS 与反向代理、设置生产环境变量、执行空库首启并完成管理员登录验收。
