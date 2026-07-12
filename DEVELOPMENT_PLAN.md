@@ -283,6 +283,18 @@ com.spring0w0.backend/
 - 旧版 `V3` 的固定 `admin/admin` 账号由 `V8` 移除；开发环境仍保留本地调试账号，生产环境必须设置 `INITIAL_ADMIN_USERNAME` 与 `INITIAL_ADMIN_PASSWORD`，且仅在用户表为空时创建首个管理员。
 - 本轮不修改现有开发库或 `uploads/`；“从零开始”适用于新生产数据库。
 
+### 迭代 H：可重复发布的 CI/CD 基础（已完成，2026-07-12）
+
+**目标**：让后续代码迭代经过自动校验、版本化构建和受控部署后再进入生产环境，同时保留数据库与上传文件的备份和代码回滚能力。
+
+完成记录：
+
+- 新增前后端多阶段 Dockerfile、生产 Compose 和 Nginx 反向代理模板；应用镜像、MySQL 数据卷和 `/srv/newblog/uploads` 严格分离，前端镜像不携带数据库、JWT 或管理员等敏感变量。
+- 新增 GitHub Actions：PR/`master` 的后端测试与打包、前端类型检查与构建；`v*` 版本标签的 GHCR 镜像发布；以及由 GitHub `production` Environment 保护的手动生产部署。
+- 生产部署仅复制 Compose 与部署脚本到服务器，不复制生产 `.env`；服务器在发布前备份 MySQL 与 `uploads/`，拉取指定版本镜像，执行 Flyway、容器健康检查和公开站点检查；容器健康检查失败时自动回滚到上一镜像版本。
+- 新增 [DEPLOYMENT.md](DEPLOYMENT.md)，明确服务器初始化、HTTPS、GitHub Variables/Secrets、首发、日常发布、手动回滚和异地备份步骤。
+- 已验证后端 29 项 Maven 测试、前端类型检查与构建、Compose 解析、Shell 与 Actions 语法、Nginx 配置、前后端 Linux 镜像构建，以及前端容器首页启动冒烟测试。
+
 ## 5. 依赖顺序与里程碑
 
 | 里程碑 | 前置条件 | 完成标志 |
@@ -307,4 +319,4 @@ com.spring0w0.backend/
 
 ## 7. 下一步
 
-路线图中的迭代 A–G 已全部完成，M5「生产链路收口」达成。下一步进入生产部署准备：确定部署架构、配置 HTTPS 与反向代理、设置生产环境变量、执行空库首启并完成管理员登录验收。
+路线图中的迭代 A–H 已全部完成，M5「生产链路收口」达成，代码仓库已经具备 CI/CD 基础。下一步是外部生产环境落地：准备 Linux 服务器、DNS 与 HTTPS；在 GitHub 配置 `production` Environment、Variables 和 Secrets；在服务器填写生产 `.env` 并配置 GHCR 拉取权限；随后使用空库执行首次版本标签发布、管理员登录与图片上传验收，最后启用异地备份和 `master` 分支保护。

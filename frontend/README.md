@@ -33,6 +33,8 @@ pnpm dev
 
 ## 生产部署
 
+完整的容器化部署、GitHub Actions CI/CD、GitHub Environment、备份和回滚说明见项目根目录的 [DEPLOYMENT.md](../DEPLOYMENT.md)。
+
 后端使用 `prod` 配置启动。必须提供以下环境变量：
 
 ```text
