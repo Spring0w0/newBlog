@@ -3,6 +3,7 @@ name: newblog
 services:
   mysql:
     image: mysql:8.4
+    mem_limit: 640m
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE is required}
@@ -12,6 +13,8 @@ services:
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=50
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -25,6 +28,9 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}:${IMAGE_TAG:?IMAGE_TAG is required}
+    pull_policy: never
+    mem_limit: 768m
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     restart: unless-stopped
     environment:
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
@@ -45,7 +51,7 @@ services:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8080/actuator/health > /dev/null"]
+      test: ["CMD-SHELL", "test -w /data/newblog/uploads && curl --fail --silent http://127.0.0.1:8080/actuator/health > /dev/null"]
       interval: 15s
       timeout: 5s
       retries: 8
@@ -55,6 +61,8 @@ services:
 
   frontend:
     image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}:${IMAGE_TAG:?IMAGE_TAG is required}
+    pull_policy: never
+    mem_limit: 384m
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}

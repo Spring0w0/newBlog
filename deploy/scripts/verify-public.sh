@@ -16,7 +16,10 @@ fi
 
 for path in / /api/site/config /rss.xml /sitemap.xml; do
 	echo "检查公开地址：${SITE_URL}${path}"
-	curl --fail --show-error --silent --location --retry 5 --retry-all-errors --retry-delay 3 "${SITE_URL}${path}" > /dev/null
+	curl --fail --show-error --silent --location \
+		--connect-timeout 5 --max-time 15 \
+		--retry 5 --retry-all-errors --retry-delay 3 \
+		"${SITE_URL}${path}" > /dev/null
 done
 
 echo "公开站点健康检查通过。"

@@ -2,6 +2,12 @@ FROM node:22-bookworm-slim AS dependencies
 
 WORKDIR /app
 
+ARG NODE_OPTIONS=--max-old-space-size=768
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV NODE_OPTIONS=${NODE_OPTIONS}
+ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
+ENV npm_config_registry=${NPM_REGISTRY}
+
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -11,10 +17,15 @@ FROM node:22-bookworm-slim AS build
 
 WORKDIR /app
 
+ARG NODE_OPTIONS=--max-old-space-size=768
+ARG NPM_REGISTRY=https://registry.npmmirror.com
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG SITE_URL
 ARG INTERNAL_API_BASE_URL=http://127.0.0.1:8080
 
+ENV NODE_OPTIONS=${NODE_OPTIONS}
+ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
+ENV npm_config_registry=${NPM_REGISTRY}
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV SITE_URL=${SITE_URL}
 ENV INTERNAL_API_BASE_URL=${INTERNAL_API_BASE_URL}
@@ -35,6 +46,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--max-old-space-size=256
 
 RUN groupadd --system --gid 1001 nodejs \
 	&& useradd --system --uid 1001 --gid nodejs nextjs
