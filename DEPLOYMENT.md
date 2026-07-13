@@ -71,19 +71,27 @@ FRONTEND_IMAGE=newblog-frontend
 
 部署脚本也会显式覆盖这两个值，确保只使用服务器本地镜像。
 
+如果 ECS 运行了仅监听 loopback 的本机 HTTP 代理，可选设置：
+
+```dotenv
+BUILD_PROXY_URL=http://127.0.0.1:7890
+```
+
+部署脚本会先验证代理，再只为前端 `docker build` 的 RUN 步骤使用 host 网络和标准代理构建参数。该值不会进入前后端运行容器；未设置时仍直接使用 Maven/npm 国内镜像。因为 host 网络会让构建步骤访问宿主机 loopback，只应部署信任的仓库标签。
+
 ## 4. 首次发布
 
 本地 `master` 的 CI 通过后创建标签：
 
 ```bash
-git tag -a v1.0.1 -m "v1.0.1"
-git push origin v1.0.1
+git tag -a v1.0.2 -m "v1.0.2"
+git push origin v1.0.2
 ```
 
 然后在 ECS 执行一条命令：
 
 ```bash
-/srv/newblog/deploy-version v1.0.1
+/srv/newblog/deploy-version v1.0.2
 ```
 
 脚本会依次执行：
@@ -101,7 +109,7 @@ git push origin v1.0.1
 
 两个构建是严格顺序执行的。部署前会确认 `/srv/newblog` 所在文件系统至少有 8GB 可用空间。构建失败发生在服务切换前，不会删除数据库卷或上传文件。已有站点在 Compose 启动、容器健康检查或公网检查任一环节失败时，脚本会同时恢复上一版本的源码配置和本地应用镜像；它不会逆向修改数据库迁移。
 
-旧标签 `v1.0.0` 使用的是上一套自动镜像部署接口，简化流程会明确拒绝部署或回滚到它。简化流程的首个兼容版本从 `v1.0.1` 开始。
+旧标签 `v1.0.0` 使用的是上一套自动镜像部署接口，简化流程会明确拒绝部署或回滚到它。`v1.0.1` 引入简化部署接口，`v1.0.2` 增加构建期本机代理支持。
 
 ## 5. 日常发布
 
@@ -143,7 +151,7 @@ docker image ls newblog-frontend
 回滚到仍保存在服务器上的版本：
 
 ```bash
-/srv/newblog/rollback-version v1.0.1
+/srv/newblog/rollback-version v1.0.2
 ```
 
 回滚脚本不会访问远程镜像仓库，会在切换前再次备份，同时检出目标标签对应的 Compose 配置，然后验证容器和公网地址。若目标版本验证失败，它会恢复回滚前的源码配置和应用镜像。它不会逆向修改 Flyway 数据库迁移；数据库变更必须保持向前兼容。

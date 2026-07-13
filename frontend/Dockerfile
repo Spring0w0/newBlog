@@ -6,12 +6,14 @@ ARG NODE_OPTIONS=--max-old-space-size=768
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 ENV NODE_OPTIONS=${NODE_OPTIONS}
 ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
-ENV npm_config_registry=${NPM_REGISTRY}
+ENV PNPM_CONFIG_REGISTRY=${NPM_REGISTRY}
 
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set registry "${NPM_REGISTRY}" --location project \
+	&& pnpm config get registry \
+	&& pnpm install --frozen-lockfile
 
 FROM node:22-bookworm-slim AS build
 
@@ -25,7 +27,7 @@ ARG INTERNAL_API_BASE_URL=http://127.0.0.1:8080
 
 ENV NODE_OPTIONS=${NODE_OPTIONS}
 ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
-ENV npm_config_registry=${NPM_REGISTRY}
+ENV PNPM_CONFIG_REGISTRY=${NPM_REGISTRY}
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV SITE_URL=${SITE_URL}
 ENV INTERNAL_API_BASE_URL=${INTERNAL_API_BASE_URL}

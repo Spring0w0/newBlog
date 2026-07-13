@@ -14,6 +14,14 @@ DEPLOY_INTERFACE_VERSION="1"
 export APP_UID="${NEWBLOG_APP_UID:-$(id -u)}"
 export APP_GID="${NEWBLOG_APP_GID:-$(id -g)}"
 
+if [[ ! -d "${SOURCE_DIR}" ]]; then
+	echo "未找到服务器源码目录：${SOURCE_DIR}" >&2
+	exit 1
+fi
+
+# Compose 会检查当前工作目录；统一切到源码目录，避免从 root 私有目录降权执行时失败。
+cd "${SOURCE_DIR}"
+
 if [[ ! -f "${COMPOSE_FILE}" ]]; then
 	echo "未找到生产 Compose 文件：${COMPOSE_FILE}" >&2
 	exit 1
@@ -50,6 +58,27 @@ read_env_value() {
 	if [[ -z "${value}" ]]; then
 		echo "生产环境文件中的 ${key} 不能为空：${ENV_FILE}" >&2
 		exit 1
+	fi
+
+	printf '%s\n' "${value}"
+}
+
+read_optional_env_value() {
+	local key="$1"
+	local line
+	local value
+
+	line="$(grep -E "^${key}=" "${ENV_FILE}" | tail -n 1 || true)"
+	if [[ -z "${line}" ]]; then
+		return 0
+	fi
+
+	value="${line#*=}"
+	value="${value%$'\r'}"
+	if [[ "${value}" == \"*\" && "${value}" == *\" ]]; then
+		value="${value:1:${#value}-2}"
+	elif [[ "${value}" == \'*\' && "${value}" == *\' ]]; then
+		value="${value:1:${#value}-2}"
 	fi
 
 	printf '%s\n' "${value}"

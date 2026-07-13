@@ -29,9 +29,42 @@ fi
 
 SITE_URL="$(read_env_value SITE_URL)"
 NEXT_PUBLIC_API_BASE_URL="$(read_env_value NEXT_PUBLIC_API_BASE_URL)"
+BUILD_PROXY_URL="$(read_optional_env_value BUILD_PROXY_URL)"
 if [[ ! "${SITE_URL}" =~ ^https:// || ! "${NEXT_PUBLIC_API_BASE_URL}" =~ ^https:// ]]; then
 	echo "SITE_URL 和 NEXT_PUBLIC_API_BASE_URL 必须使用 HTTPS。" >&2
 	exit 1
+fi
+
+FRONTEND_BUILD_NETWORK_ARGS=()
+FRONTEND_BUILD_PROXY_ARGS=()
+if [[ -n "${BUILD_PROXY_URL}" ]]; then
+	BUILD_PROXY_URL="${BUILD_PROXY_URL%/}"
+	if [[ ! "${BUILD_PROXY_URL}" =~ ^http://127\.0\.0\.1:([0-9]{1,5})$ ]]; then
+		echo "BUILD_PROXY_URL 只允许使用本机 HTTP 代理，例如 http://127.0.0.1:7890。" >&2
+		exit 1
+	fi
+	BUILD_PROXY_PORT="${BASH_REMATCH[1]}"
+	if ((10#${BUILD_PROXY_PORT} < 1 || 10#${BUILD_PROXY_PORT} > 65535)); then
+		echo "BUILD_PROXY_URL 的端口必须在 1 到 65535 之间。" >&2
+		exit 1
+	fi
+
+	if ! curl --proxy "${BUILD_PROXY_URL}" --connect-timeout 5 --max-time 30 \
+		--fail --silent --show-error --output /dev/null https://registry.npmmirror.com/; then
+		echo "BUILD_PROXY_URL 无法访问前端依赖镜像站，停止构建。" >&2
+		exit 1
+	fi
+
+	echo "前端构建依赖下载将使用本机代理 ${BUILD_PROXY_URL}。"
+	FRONTEND_BUILD_NETWORK_ARGS=(--network host)
+	FRONTEND_BUILD_PROXY_ARGS=(
+		--build-arg "HTTP_PROXY=${BUILD_PROXY_URL}"
+		--build-arg "HTTPS_PROXY=${BUILD_PROXY_URL}"
+		--build-arg "http_proxy=${BUILD_PROXY_URL}"
+		--build-arg "https_proxy=${BUILD_PROXY_URL}"
+		--build-arg "NO_PROXY=localhost,127.0.0.1,::1"
+		--build-arg "no_proxy=localhost,127.0.0.1,::1"
+	)
 fi
 
 export BACKEND_IMAGE="${NEWBLOG_BACKEND_IMAGE:-newblog-backend}"
@@ -68,6 +101,8 @@ docker build \
 
 echo "后端构建完成，开始构建前端版本 ${RELEASE_TAG}..."
 docker build \
+	"${FRONTEND_BUILD_NETWORK_ARGS[@]}" \
+	"${FRONTEND_BUILD_PROXY_ARGS[@]}" \
 	--file "${SOURCE_DIR}/frontend/Dockerfile" \
 	--build-arg "NODE_OPTIONS=--max-old-space-size=768" \
 	--build-arg "NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}" \
