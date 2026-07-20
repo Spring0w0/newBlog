@@ -85,6 +85,7 @@ class SiteServiceTests {
                 {
                   "meta":{"title":"测试站点","description":"测试描述"},
                   "faviconUrl":"http://localhost:8080/images/site/favicon.png",
+                  "hiCard":{"greeting":"晚上好","introPrefix":"我是","introSuffix":"欢迎来玩","avatarLink":"/live2d"},
                   "backgroundColors":["#ffffff"],
                   "artImages":[{"id":"hero","url":"https://example.com/hero.png"}],
                   "backgroundImages":[{"id":"background","url":"https://example.com/background.png"}],
@@ -112,6 +113,7 @@ class SiteServiceTests {
         var saved = siteService.saveSiteSettings(new SiteSettingsSaveRequest(config, cardStyles));
 
         assertThat(saved.config().path("faviconUrl").asText()).isEqualTo("/images/site/favicon.png");
+        assertThat(saved.config().path("hiCard").path("introPrefix").asText()).isEqualTo("我是");
         assertThat(saved.cardStyles().path("hiCard").path("width").asInt()).isEqualTo(360);
         verify(siteConfigMapper).updateById(argThat((SiteConfig site) -> site.getTheme().contains("/images/site/favicon.png")));
         verify(artImageMapper).insert(argThat((ArtImage image) -> image.getId().equals("hero")));

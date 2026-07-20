@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { deleteUploadedImage, uploadImage } from '@/lib/file-api'
 import type { FileItem } from './types'
 import type { SiteContent } from '../../stores/config-store'
+import { resolveAvatarUrl } from '../../stores/config-defaults'
 
 interface FaviconAvatarUploadProps {
 	formData: SiteContent
@@ -62,7 +63,11 @@ export function FaviconAvatarUpload({ formData, setFormData, faviconItem, setFav
 				<input ref={faviconInputRef} type='file' accept='image/*' className='hidden' onChange={handleFaviconFileSelect} />
 				<div className='group relative h-20 w-20 cursor-pointer overflow-hidden rounded-lg border bg-white/60'>
 					{faviconItem || formData.faviconUrl ? (
-						<img src={faviconItem ? (faviconItem.type === 'file' ? faviconItem.previewUrl : faviconItem.url) : formData.faviconUrl} alt='favicon preview' className='h-full w-full object-cover' />
+						<img
+							src={faviconItem ? (faviconItem.type === 'file' ? faviconItem.previewUrl : faviconItem.url) : formData.faviconUrl}
+							alt='favicon preview'
+							className='h-full w-full object-cover'
+						/>
 					) : (
 						<img src='/favicon.png' alt='current favicon' className='h-full w-full object-cover' />
 					)}
@@ -79,9 +84,13 @@ export function FaviconAvatarUpload({ formData, setFormData, faviconItem, setFav
 				<input ref={avatarInputRef} type='file' accept='image/*' className='hidden' onChange={handleAvatarFileSelect} />
 				<div className='group relative h-20 w-20 cursor-pointer overflow-hidden rounded-full border bg-white/60'>
 					{avatarItem || formData.avatarUrl ? (
-						<img src={avatarItem ? (avatarItem.type === 'file' ? avatarItem.previewUrl : avatarItem.url) : formData.avatarUrl} alt='avatar preview' className='h-full w-full object-cover' />
+						<img
+							src={avatarItem ? (avatarItem.type === 'file' ? avatarItem.previewUrl : avatarItem.url) : resolveAvatarUrl(formData.avatarUrl)}
+							alt='avatar preview'
+							className='h-full w-full object-cover'
+						/>
 					) : (
-						<img src='/images/avatar.png' alt='current avatar' className='h-full w-full object-cover' />
+						<img src={resolveAvatarUrl()} alt='current avatar' className='h-full w-full object-cover' />
 					)}
 					<div className='pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100'>
 						<span className='text-xs text-white'>{avatarItem ? '更换' : '上传'}</span>

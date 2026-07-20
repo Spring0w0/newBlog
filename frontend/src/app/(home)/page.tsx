@@ -17,24 +17,63 @@ import { useLayoutEditStore } from './stores/layout-edit-store'
 import { useConfigStore } from './stores/config-store'
 import { toast } from 'sonner'
 import ConfigDialog from './config-dialog/index'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import SnowfallBackground from '@/layout/backgrounds/snowfall'
+import { useContentEditStore } from './stores/content-edit-store'
+import { useAuthStore } from '@/hooks/use-auth'
 
 export default function Home() {
 	const { maxSM } = useSize()
 	const { cardStyles, configDialogOpen, setConfigDialogOpen, siteContent } = useConfigStore()
 	const editing = useLayoutEditStore(state => state.editing)
-	const saveEditing = useLayoutEditStore(state => state.saveEditing)
-	const cancelEditing = useLayoutEditStore(state => state.cancelEditing)
+	const saveLayoutEditing = useLayoutEditStore(state => state.saveEditing)
+	const cancelLayoutEditing = useLayoutEditStore(state => state.cancelEditing)
+	const contentEditing = useContentEditStore(state => state.editing)
+	const contentSaving = useContentEditStore(state => state.isSaving)
+	const startContentEditing = useContentEditStore(state => state.startEditing)
+	const saveContentEditing = useContentEditStore(state => state.saveEditing)
+	const cancelContentEditing = useContentEditStore(state => state.cancelEditing)
+	const { isAuth, openLoginDialog } = useAuthStore()
 
 	const handleSave = () => {
-		saveEditing()
+		saveLayoutEditing()
 		toast.success('首页布局偏移已保存（尚未提交到远程配置）')
 	}
 
 	const handleCancel = () => {
-		cancelEditing()
+		cancelLayoutEditing()
 		toast.info('已取消此次拖拽布局修改')
+	}
+
+	const handleStartContentEditing = useCallback(() => {
+		if (contentEditing) return
+		const start = () => {
+			startContentEditing()
+			toast.info('正在所见即所得编辑首页内容')
+		}
+		if (isAuth) {
+			start()
+		} else {
+			openLoginDialog(start)
+		}
+	}, [contentEditing, isAuth, openLoginDialog, startContentEditing])
+
+	const handleSaveContentEditing = async () => {
+		try {
+			await saveContentEditing()
+			toast.success('首页内容已保存')
+		} catch (error: any) {
+			toast.error(`保存失败: ${error?.message || '未知错误'}`)
+		}
+	}
+
+	const handleCancelContentEditing = async () => {
+		try {
+			await cancelContentEditing()
+			toast.info('已取消首页内容编辑')
+		} catch (error: any) {
+			toast.error(`取消编辑时清理图片失败: ${error?.message || '未知错误'}`)
+		}
 	}
 
 	useEffect(() => {
@@ -42,6 +81,9 @@ export default function Home() {
 			if ((e.ctrlKey || e.metaKey) && (e.key === 'l' || e.key === ',')) {
 				e.preventDefault()
 				setConfigDialogOpen(true)
+			} else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+				e.preventDefault()
+				handleStartContentEditing()
 			}
 		}
 
@@ -49,7 +91,7 @@ export default function Home() {
 		return () => {
 			window.removeEventListener('keydown', handleKeyDown)
 		}
-	}, [setConfigDialogOpen])
+	}, [setConfigDialogOpen, handleStartContentEditing])
 
 	return (
 		<>
@@ -70,6 +112,34 @@ export default function Home() {
 							</motion.button>
 							<motion.button type='button' whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleSave} className='brand-btn px-3 py-1 text-xs'>
 								保存偏移
+							</motion.button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{contentEditing && (
+				<div className='pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center pt-6'>
+					<div className='pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/85 px-4 py-2 shadow-lg backdrop-blur'>
+						<span className='text-xs text-gray-600'>正在编辑首页内容，图片和文字会实时显示在卡片上</span>
+						<div className='flex gap-2'>
+							<motion.button
+								type='button'
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								onClick={() => void handleCancelContentEditing()}
+								disabled={contentSaving}
+								className='rounded-xl border bg-white px-3 py-1 text-xs font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-60'>
+								取消
+							</motion.button>
+							<motion.button
+								type='button'
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								onClick={() => void handleSaveContentEditing()}
+								disabled={contentSaving}
+								className='brand-btn px-3 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-70'>
+								{contentSaving ? '保存中...' : '保存内容'}
 							</motion.button>
 						</div>
 					</div>

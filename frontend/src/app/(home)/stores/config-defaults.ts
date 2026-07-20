@@ -17,6 +17,12 @@ export type SiteContent = {
 	}
 	faviconUrl?: string
 	avatarUrl?: string
+	hiCard?: {
+		greeting?: string
+		introPrefix?: string
+		introSuffix?: string
+		avatarLink?: string
+	}
 	theme: ThemeColors
 	backgroundColors: string[]
 	artImages?: Array<{ id: string; url: string; description?: string }>
@@ -34,6 +40,23 @@ export type SiteContent = {
 	enableChristmas?: boolean
 	beian?: { text: string; link: string }
 	[key: string]: unknown
+}
+
+export const BUILTIN_AVATAR_URL = '/avatar.png'
+export const LEGACY_BUILTIN_AVATAR_URL = '/images/avatar.png'
+export const BUILTIN_ART_URL = '/art-cat.png'
+export const LEGACY_BUILTIN_ART_URL = '/images/art/cat.png'
+
+export function resolveAvatarUrl(avatarUrl?: string): string {
+	const url = avatarUrl?.trim()
+	if (!url || url === LEGACY_BUILTIN_AVATAR_URL) return BUILTIN_AVATAR_URL
+	return url
+}
+
+export function resolveArtUrl(artUrl?: string): string {
+	const url = artUrl?.trim()
+	if (!url || url === LEGACY_BUILTIN_ART_URL) return BUILTIN_ART_URL
+	return url
 }
 
 export type CardStyle = {
@@ -71,7 +94,13 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
 		description: '个人博客'
 	},
 	faviconUrl: '/favicon.png',
-	avatarUrl: '/images/avatar.png',
+	avatarUrl: BUILTIN_AVATAR_URL,
+	hiCard: {
+		greeting: '',
+		introPrefix: "I'm",
+		introSuffix: 'Nice to meet you!',
+		avatarLink: '/live2d'
+	},
 	theme: {
 		colorBrand: '#2fcbe7',
 		colorPrimary: '#5B423F',
@@ -124,12 +153,27 @@ export function createDefaultSiteContent(): SiteContent {
 	return {
 		...DEFAULT_SITE_CONTENT,
 		meta: { ...DEFAULT_SITE_CONTENT.meta },
+		hiCard: { ...DEFAULT_SITE_CONTENT.hiCard },
 		theme: { ...DEFAULT_SITE_CONTENT.theme },
 		backgroundColors: [...DEFAULT_SITE_CONTENT.backgroundColors],
 		artImages: [],
 		backgroundImages: [],
 		socialButtons: [],
 		beian: { ...DEFAULT_SITE_CONTENT.beian! }
+	}
+}
+
+export function cloneSiteContent(content: SiteContent): SiteContent {
+	return {
+		...content,
+		meta: { ...content.meta },
+		hiCard: content.hiCard ? { ...content.hiCard } : undefined,
+		theme: { ...content.theme },
+		backgroundColors: [...(content.backgroundColors ?? [])],
+		artImages: content.artImages?.map(item => ({ ...item })) ?? [],
+		backgroundImages: content.backgroundImages?.map(item => ({ ...item })) ?? [],
+		socialButtons: content.socialButtons?.map(item => ({ ...item })) ?? [],
+		beian: content.beian ? { ...content.beian } : undefined
 	}
 }
 

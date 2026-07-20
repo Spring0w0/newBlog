@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { useSize } from '@/hooks/use-size'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import { HomeDraggableLayer } from '@/app/(home)/home-draggable-layer'
+import { resolveAvatarUrl } from '@/app/(home)/stores/config-defaults'
 
 const list = [
 	{
@@ -138,7 +139,14 @@ export default function NavCard() {
 					)}
 
 					<Link className='flex items-center gap-3' href='/'>
-						<img src={siteContent.avatarUrl || '/images/avatar.png'} alt='avatar' width={40} height={40} style={{ boxShadow: ' 0 12px 20px -5px #E2D9CE' }} className='rounded-full' />
+						<img
+							src={resolveAvatarUrl(siteContent.avatarUrl)}
+							alt='avatar'
+							width={40}
+							height={40}
+							style={{ boxShadow: ' 0 12px 20px -5px #E2D9CE' }}
+							className='rounded-full object-cover'
+						/>
 						{form === 'full' && <span className='font-averia mt-1 text-2xl leading-none font-medium'>{siteContent.meta.title}</span>}
 						{form === 'full' && <span className='text-brand mt-2 text-xs font-medium'>(开发中)</span>}
 					</Link>

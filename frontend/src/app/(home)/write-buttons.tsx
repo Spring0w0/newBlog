@@ -8,12 +8,18 @@ import { useRouter } from 'next/navigation'
 import { useSize } from '@/hooks/use-size'
 import DotsSVG from '@/svgs/dots.svg'
 import { HomeDraggableLayer } from './home-draggable-layer'
+import { PencilLineIcon } from 'lucide-react'
+import { useContentEditStore } from './stores/content-edit-store'
+import { useAuthStore } from '@/hooks/use-auth'
 
 export default function WriteButton() {
 	const center = useCenterStore()
 	const { cardStyles, setConfigDialogOpen, siteContent } = useConfigStore()
 	const { maxSM } = useSize()
 	const router = useRouter()
+	const startContentEditing = useContentEditStore(state => state.startEditing)
+	const contentEditing = useContentEditStore(state => state.editing)
+	const { isAuth, openLoginDialog } = useAuthStore()
 	const styles = cardStyles.writeButtons
 	const hiCardStyles = cardStyles.hiCard
 	const clockCardStyles = cardStyles.clockCard
@@ -31,9 +37,19 @@ export default function WriteButton() {
 	const x = styles.offsetX !== null ? center.x + styles.offsetX : center.x + CARD_SPACING + hiCardStyles.width / 2
 	const y = styles.offsetY !== null ? center.y + styles.offsetY : center.y - clockCardStyles.offset - styles.height - CARD_SPACING / 2 - clockCardStyles.height
 
+	const handleEditHomeContent = () => {
+		if (contentEditing) return
+		const start = () => startContentEditing()
+		if (isAuth) {
+			start()
+		} else {
+			openLoginDialog(start)
+		}
+	}
+
 	return (
 		<HomeDraggableLayer cardKey='writeButtons' x={x} y={y} width={styles.width} height={styles.height}>
-			<motion.div initial={{ left: x, top: y }} animate={{ left: x, top: y }} className='absolute flex items-center gap-4'>
+			<motion.div initial={{ left: x, top: y }} animate={{ left: x, top: y }} className='absolute flex items-center gap-2'>
 				<motion.button
 					onClick={() => router.push('/write')}
 					initial={{ opacity: 0, scale: 0.6 }}
@@ -57,6 +73,20 @@ export default function WriteButton() {
 					<span>写文章</span>
 				</motion.button>
 				<motion.button
+					type='button'
+					title='编辑首页内容'
+					initial={{ opacity: 0, scale: 0.6 }}
+					animate={{ opacity: 1, scale: 1 }}
+					whileHover={{ scale: 1.05 }}
+					whileTap={{ scale: 0.95 }}
+					onClick={handleEditHomeContent}
+					className='bg-card/80 rounded-full border p-2 shadow-sm backdrop-blur disabled:cursor-not-allowed disabled:opacity-60'
+					disabled={contentEditing}>
+					<PencilLineIcon className='text-secondary h-5 w-5' />
+				</motion.button>
+				<motion.button
+					type='button'
+					title='打开站点设置'
 					initial={{ opacity: 0, scale: 0.6 }}
 					animate={{ opacity: 1, scale: 1 }}
 					whileHover={{ scale: 1.05 }}

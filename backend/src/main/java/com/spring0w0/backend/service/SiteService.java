@@ -118,6 +118,7 @@ public class SiteService {
     private NormalizedSiteConfig normalizeSiteConfig(JsonNode request) {
         ObjectNode config = requireObject(request, "站点配置必须是 JSON 对象").deepCopy();
         validateMeta(config);
+        validateHiCard(config);
         validateTheme(config);
         validateBackgroundColors(config);
         validateHat(config);
@@ -137,6 +138,21 @@ public class SiteService {
         requiredText(meta, "title", 200, "站点标题不能为空");
         requiredText(meta, "description", 500, "站点描述不能为空");
         optionalText(meta, "username", 100, "用户名不能超过 100 个字符");
+    }
+
+    private void validateHiCard(ObjectNode config) {
+        JsonNode hiCard = config.get("hiCard");
+        if (hiCard == null || hiCard.isNull()) {
+            return;
+        }
+        ObjectNode hiCardObject = requireObject(hiCard, "首页问候卡片配置必须是 JSON 对象");
+        optionalText(hiCardObject, "greeting", 100, "首页问候语不能超过 100 个字符");
+        optionalText(hiCardObject, "introPrefix", 50, "首页问候前缀不能超过 50 个字符");
+        optionalText(hiCardObject, "introSuffix", 200, "首页问候结尾不能超过 200 个字符");
+        String avatarLink = optionalText(hiCardObject, "avatarLink", 1000, "首页头像链接不能超过 1000 个字符");
+        if (avatarLink != null && !avatarLink.startsWith("/") && !avatarLink.matches("(?i)^https?://.+")) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "首页头像链接必须是站内路径或 HTTP(S) URL");
+        }
     }
 
     private void validateTheme(ObjectNode config) {
