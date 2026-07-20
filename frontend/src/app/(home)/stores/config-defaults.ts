@@ -46,6 +46,7 @@ export const BUILTIN_AVATAR_URL = '/avatar.png'
 export const LEGACY_BUILTIN_AVATAR_URL = '/images/avatar.png'
 export const BUILTIN_ART_URL = '/art-cat.png'
 export const LEGACY_BUILTIN_ART_URL = '/images/art/cat.png'
+export const DEFAULT_DISPLAY_USERNAME = 'Suni'
 
 export function resolveAvatarUrl(avatarUrl?: string): string {
 	const url = avatarUrl?.trim()
@@ -57,6 +58,10 @@ export function resolveArtUrl(artUrl?: string): string {
 	const url = artUrl?.trim()
 	if (!url || url === LEGACY_BUILTIN_ART_URL) return BUILTIN_ART_URL
 	return url
+}
+
+export function resolveDisplayUsername(username?: string): string {
+	return username?.trim() || DEFAULT_DISPLAY_USERNAME
 }
 
 export type CardStyle = {

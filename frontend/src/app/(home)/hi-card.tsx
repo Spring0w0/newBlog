@@ -3,7 +3,7 @@ import Card from '@/components/card'
 import { useConfigStore } from './stores/config-store'
 import { HomeDraggableLayer } from './home-draggable-layer'
 import Link from 'next/link'
-import { resolveAvatarUrl } from './stores/config-defaults'
+import { resolveAvatarUrl, resolveDisplayUsername } from './stores/config-defaults'
 import { useEffect, useRef } from 'react'
 import { ImagePlusIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -34,7 +34,7 @@ export default function HiCard() {
 	const latestUploadedAvatarFileIdRef = useRef<number | null>(null)
 	const styles = cardStyles.hiCard
 	const greeting = siteContent.hiCard?.greeting?.trim() || getGreeting()
-	const username = siteContent.meta.username?.trim() || 'Suni'
+	const username = resolveDisplayUsername(siteContent.meta.username)
 	const introPrefix = siteContent.hiCard?.introPrefix ?? "I'm"
 	const introSuffix = siteContent.hiCard?.introSuffix ?? 'Nice to meet you!'
 	const avatarUrl = resolveAvatarUrl(siteContent.avatarUrl)

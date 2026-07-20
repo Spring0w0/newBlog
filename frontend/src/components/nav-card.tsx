@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils'
 import { useSize } from '@/hooks/use-size'
 import { useConfigStore } from '@/app/(home)/stores/config-store'
 import { HomeDraggableLayer } from '@/app/(home)/home-draggable-layer'
-import { resolveAvatarUrl } from '@/app/(home)/stores/config-defaults'
+import { resolveAvatarUrl, resolveDisplayUsername } from '@/app/(home)/stores/config-defaults'
 
 const list = [
 	{
@@ -68,6 +68,7 @@ export default function NavCard() {
 	const { siteContent, cardStyles } = useConfigStore()
 	const styles = cardStyles.navCard
 	const hiCardStyles = cardStyles.hiCard
+	const displayName = resolveDisplayUsername(siteContent.meta.username)
 
 	const activeIndex = useMemo(() => {
 		const index = list.findIndex(item => pathname === item.href)
@@ -147,7 +148,7 @@ export default function NavCard() {
 							style={{ boxShadow: ' 0 12px 20px -5px #E2D9CE' }}
 							className='rounded-full object-cover'
 						/>
-						{form === 'full' && <span className='font-averia mt-1 text-2xl leading-none font-medium'>{siteContent.meta.title}</span>}
+						{form === 'full' && <span className='font-averia mt-1 text-2xl leading-none font-medium'>{displayName}</span>}
 						{form === 'full' && <span className='text-brand mt-2 text-xs font-medium'>(开发中)</span>}
 					</Link>
 
